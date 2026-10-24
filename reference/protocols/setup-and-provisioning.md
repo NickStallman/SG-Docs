@@ -238,7 +238,7 @@ flowchart TD
   C --> G["Station SSID + password saved"]
   D --> G
   E --> G
-  G --> H["Station joins router; cloud link comes up"]
+  G --> H["Station joins router, cloud link comes up"]
   F --> H
   H --> I["Installer logs in as admin (level 3)"]
   I --> J["Pick country / power company / grid type"]

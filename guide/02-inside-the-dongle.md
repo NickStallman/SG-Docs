@@ -140,7 +140,7 @@ works alongside both. There are three ways in:
 flowchart TD
   start["New or reset dongle"] --> q{"How is it connected?"}
   q -->|"Ethernet cable"| eth["DHCP lease from the router"]
-  q -->|"Phone, SmartConfig"| sc["1 click; app broadcasts Wi-Fi name and password"]
+  q -->|"Phone, SmartConfig"| sc["1 click, app broadcasts Wi-Fi name and password"]
   q -->|"Phone or laptop, hotspot"| ap["Join SG-serial, open https://11.11.11.1"]
   ap --> creds["Enter router name and password"]
   sc --> saved["Credentials saved"]

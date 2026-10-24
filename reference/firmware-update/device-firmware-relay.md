@@ -97,7 +97,7 @@ sequenceDiagram
         D->>I: data packet @ 20045
         I-->>D: echo
     end
-    D->>I: read lost report @ 20171; resend as needed
+    D->>I: read lost report at 20171, resend as needed
     Note over I: after last packet: CRC-32 + secure-boot signature check
     I->>M: relay image over CAN / serial, or self-apply + reset
     D->>I: poll status @ 20005 (stage 4 = success)

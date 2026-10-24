@@ -142,7 +142,7 @@ flowchart TD
     B -- no --> X2["exception 2"]
     B -- yes --> C{"registers in the type table"}
     C -- "all" --> K["answer from poll cache"]
-    C -- "some (FC 4)" --> K0["cache; unmapped registers read 0x0000"]
+    C -- "some (FC 4)" --> K0["cache, unmapped registers read 0x0000"]
     C -- "none (FC 4)" --> X2
     C -- "not all (FC 3)" --> L["live RS-485 read of the whole range"]
     L -- ok --> R["raw device bytes"]

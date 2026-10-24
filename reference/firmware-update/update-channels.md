@@ -59,7 +59,7 @@ sequenceDiagram
     B->>D: POST /iconfig/get_time {ip}
     D->>S: GET /v2/web/get_time
     S-->>D: {result_data:{time}}
-    Note over D: pick the answering port; sign = SHA-256(time + secret)
+    Note over D: pick the answering port, sign = SHA-256 of time plus secret
     D-->>B: {result_data:{time}}
     B->>D: POST /iconfig/select_packages
     D->>S: GET /v2/web/select_packages
