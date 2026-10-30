@@ -248,7 +248,8 @@ The field-level meaning of the request and the reply is in [cloud-commands.md](c
 
 ## Not yet known
 
-- The receive path appears to ignore incoming PUBLISH packets longer than about 2 KB, which would be
-  a tighter limit than the 4096-byte rule in step 4. This is not yet confirmed.
+- The MQTT receive path drops a PUBLISH whose remaining length is over 2048 bytes, which would be a
+  tighter limit than the 4096-byte rule in step 4. Whether every command goes through that check, and how
+  the limit relates to the compressed size on the wire, is not confirmed.
 - It is not known whether the cloud ever publishes commands with the retain flag set, which is the
   case the retained clear guards against.

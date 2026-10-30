@@ -80,7 +80,11 @@ Modbus-TCP view of an SH10RS carries the 5221 code (0x8200) at 13000, not this b
 
 The inverter's power stage produces only 0x0000, 0x0400, 0x0800, 0x1000, 0x1200, 0x1300, 0x1400,
 0x1500, 0x1600, 0x1800, 0x1900, 0x2000, 0x4000, 0x4001, 0x5500, 0x8100, 0x8200 and 0x9100; its
-controller adds 0x2500 and reports 0x1400 while the power stage does not answer. Meanings worth
+controller adds 0x2500, reports 0x1400 while the power stage does not answer, holds 0x1200 until its
+first synchronisation with the power stage is complete, forces 0x5500 (with a stop) or 0x9100 from
+the fault and alarm bits of the arc-fault status word, and reports 0x1700 while an AFCI self-test
+started through holding 9801 = 170 runs. Read directly over RS-485, input 13000 carries this same
+state code (for example 0x8200), not the bit coding of Sungrow's published document. Meanings worth
 knowing: 0x1300 is the state after a stop command (the inverter waits for a start); 0x1800 is the
 PV string-detection sweep; 0x1900 means rapid shutdown is engaged (31034); 0x8200 is a run in which
 the active-power limit (33183 or the power-limit command) is the binding derating source, while any
@@ -148,8 +152,10 @@ battery slave (200–204) for that stack's own faults, see
 [battery-interface.md](battery-interface.md).
 
 Battery-system protection and alarm bits from the battery master are folded into four 32-bit
-flag words: 13070/13071, 13072/13073, 13074/13075 and 13078/13079 (13076/13077 is 0). Their bit
-meanings are not published.
+flag words: 13070/13071, 13072/13073, 13074/13075 and 13078/13079 (13076/13077 is 0). They are built
+bit by bit from the protection and warning words of the battery master's system frame (CAN 0x000),
+and the controller derives the battery entries of the fault list (codes 732 onwards) from them. The
+bit layout of the four words is not published.
 
 ## Real-time AC, PV, grid and load values (private map)
 
@@ -173,7 +179,7 @@ meanings are not published.
 | 5251, 5252 | 1 each | s16 | 0.1 A | phase B/C current | 13032, 13033 | 0xFFFF, which decodes as −0.1 A: ignore |
 | 5333–5340 | 8 | u16 | 0.1 V / 0.1 A | MPPT 1–4 voltage, current (V, I pairs) | 5011–5016, 5115/5116 | four trackers |
 | 5509 | 2 | u32 | 1 W | active power limit in force | — | not served on the SH10RS |
-| 5622, 5623 | 1 each | u16 | unit not confirmed (×10 W or 0.1 %) | export-limit setting range, min / max | 5622, 5623 | raw 0 / 1000; the inverter enforces this range on 13074 |
+| 5622, 5623 | 1 each | u16 | 10 W | export-limit setting range, min / max | 5622, 5623 | 0 / 1000 (10.00 kW). 5622 always reads 0; 5623 is the model's export ceiling (the rating). A write to 13074 is accepted when the value ÷ 10 lies within them |
 
 ## Grid meter and backup port
 
@@ -205,7 +211,7 @@ All energies are 0.1 kWh. Daily counters are u16 and reset at midnight inverter 
 | 5666 / 5667 | 1 / 2 | daily / total PV-to-battery charge | 13012 / 13013 | |
 | 5611 | 2 | total export (meter) | 13046 | |
 | 5615 | 2 | total import (meter) | 13037 | |
-| 5609 / 5613 | 2 / 2 | daily export / daily import | 13045 / 13036 | **not served** at 5609/5613 on P069; read the published-map addresses |
+| 5609 / 5613 | 2 / 2 | daily export / daily import | 13045 / 13036 | **not served** at 5609/5613 on P069. 13045 and 13036 (u16) are the inverter's own daily counters, integrated from the meter's export and import energy totals and reset at midnight |
 | 5669 / 5670 | 1 / 2 | daily / total battery discharge | 13026 / 13027 | |
 | 5672 | 1 | daily battery charge | 13040 | |
 | 5673 / 5674 | 2 | total battery charge | 13041 / 13042 | **broken at 5673**: see below |
@@ -293,7 +299,11 @@ Inside a mapped block, values the dongle does not have read as 0. A block outsid
 answers exception 2. On this model, input 13050–13068 and 13070–13079 read 0.
 
 **Change stream.** Besides cyclic reads, Sungrow's private function code 0x65 carries a stream
-of changed values. Its framing is described in
+of changed values. On P069 it tracks 740 registers: 5214–5387, 5448–5579, 5601–5642, 5659–5681,
+5719–5829, 5920–6005, 6051–6099, 6950, 7816–7853, 7857, 7880–7889, 7893–7894, 8047–8048,
+8150–8163, 8801–8845, 10451–10455 and 10752–10756. They are read through the same code that serves
+function 4, so the stream carries nothing a function-4 read does not; the deadband is 0 for most
+registers and 50 raw units for the 32-bit power values. Its framing is described in
 [`../../protocols/modbus-function-codes.md`](../../protocols/modbus-function-codes.md).
 
 ## Not served on P069
@@ -310,7 +320,4 @@ These rows exist in the private map but read 0xFFFF (or −1 when signed) on thi
 
 ## Not yet known
 
-- Which coding the inverter itself serves at input 13000 when read directly over RS-485.
-- Whether 13036/13045 (daily import/export in the published map) carry data on P069.
-- The meaning of the BMS flag words 13070–13079 and of the 5487/5489 bits other than 4, 15, 21, 22 and 25.
-- Which of these registers the 0x65 change stream covers.
+- The bit layout of the BMS flag words 13070–13079, and the meaning of the 5487/5489 bits other than 4, 15, 21, 22 and 25.

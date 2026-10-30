@@ -101,7 +101,7 @@ Values shown are those of AS/NZS 4777.2:2020 Australia A, as read on a hybrid si
 | Power ramps | 31196–31202 | soft start after fault on, 360 s; ramp control on, 16 %/min down and up |
 | Volt-Watt | 31230–31239 | on, 253 / 260 / 260 / 260 V → 100 / 20 / 20 / 20 %, 1.0 s |
 | Volt-VAr (Q(U)) | 31605, 31615, 31700–31713, 31865–31872 | mode 164 = Q(U); curve 207 / 220 / 240 / 258 V → −44 / 0 / 0 / +60 %; enter 80 %, exit 10 % |
-| Charge-side under-voltage response (probably ES variant only) | 33006–33015 | on, 215 / 207 / 207 / 207 V → 0 / 80 / 80 / 80 %, 1.0 s |
+| Charge-side under-voltage response (ES variant only) | 33006–33015 | on, 215 / 207 / 207 / 207 V → 0 / 80 / 80 / 80 %, 1.0 s |
 | Low / high voltage ride-through | 30798–30815, 30997–31012 | LVRT zero-power mode on, 180.0 V / 70.0 V, 10 000 / 1000 ms; HVRT zero-power mode on, 260.0 V, 1000 ms |
 | Reconnection conditions | 32535–32552 | grid check on, 47.50–50.15 Hz, 89.1–110.0 %, 60 s, rising gradient 16 %/min |
 | Anti-islanding | 30360 | active islanding detection on (adds a frequency-dependent phase shift to the current reference; the passive detector on the phase-locked loop is always on) |

@@ -139,8 +139,8 @@ address**, low word first, so the useful 1-based numbers are odd. The table give
 | 19701–19758 | 19700–19757 | write | commands: counter and state resets, a capacity value (19709), the two open-wire thresholds (19711, 19713; default 400.0 mV), a selector (19715: module, length, offset) and a data register (19717). With a module selected, 19717 writes up to 4 bytes of that module's EEPROM; with module 0 it writes the selected BCU parameter |
 | 19721–19757 | 19720–19756 | read | parameter window 1: 19 BCU parameters, one per u32 |
 | 19759/19760 | 19758 | write | **module SOC write**: sets every module's SOC to the u32 value in 0.001 % (100000 = 100.000 %). The SH10RS sends it once per charging episode when the master reports seven modules ([balancing-and-soc.md](balancing-and-soc.md#calibration-at-the-top-and-between-stacks)) |
-| 19801–19804 | 19800–19802 | read | a 64-bit value, meaning not identified |
-| 19805 | 19804 | read | not identified |
+| 19801–19804 | 19800–19802 | read | bitmask of the protection ids currently at level 3: bit id − 1, ids 1–32 in 19801/19802 and ids 33–53 in 19803/19804 |
+| 19805 | 19804 | read | the stack's blended SOC, 0.01 % (the value the stack shares with its peers in frame 0x400) |
 | 19807 | 19806 | read | highest-cell location as module × 100 + cell |
 | 19809 | 19808 | read | highest cell voltage |
 | 19811 | 19810 | read | lowest-cell location as module × 100 + cell |
@@ -153,17 +153,18 @@ address**, low word first, so the useful 1-based numbers are odd. The table give
 | 19827, 19829 | 19826, 19828 | read | lifetime charge and discharge, 0.01 Ah |
 | 19831–19846 | 19830–19845 | read | module 1–8 highest cell voltage |
 | 19849–19864 | 19848–19863 | read | module 1–8 lowest cell voltage |
-| 19867–19882 | 19866–19881 | read | a per-module value, not identified |
+| 19867–19882 | 19866–19881 | read | a second per-module SOC-type value, 0.01 %; which SOC estimate it holds is not identified |
 | 19883–19898 | 19882–19897 | read | module 1–8 SOC |
 | 19899 | 19898 | read | **indirect read** of the item selected through 19715/19717: the selected parameter or EEPROM bytes, or a diagnostic code such as 0x1000 (calibration aggregate), 0x1001 (balancing state), 0x1004 (per-module calibration states as nibbles), 0x1009 onwards (per-module Ah pairs), 0x101C (board-variant code), 0x1028–0x102C (record-export status) |
 | 19939/19940 | 19938 | read, write | **discharge cut-off SOC**, 0.01 %, default 500 = 5.00 %, range 0–10000 |
 | 19941/19942 | 19940 | read, write | **emergency-charging SOC**, 0.01 %, default 300 = 3.00 % |
-| 19943/19944 | 19942 | read, write | the third parameter of this window, meaning not identified |
+| 19943/19944 | 19942 | read, write | **idle-mode SOC threshold**, 0.01 %, default 200 = 2.00 %, range 0–10000 |
 
 The dongle's battery poll reads 19939. The iSolarCloud app lists 19939 and 19941 as holding
 registers writable at its senior access level, with 19939 limited to 0–5000 and required to be at
-least 19941. Writing 33061 = 0xAA on the inverter (maintenance procedure 1) sets both SOC
-thresholds to 0 for the duration and restores the factory values 5.00 % and 3.00 % afterwards.
+least 19941. The stock dongle's parameter page shows all three per stack, 19943 as "Idle mode SOC
+threshold" (0–100.00 %). Writing 33061 = 0xAA on the inverter (maintenance procedure 1) sets both
+SOC thresholds to 0 for the duration and restores the factory values 5.00 % and 3.00 % afterwards.
 
 The window has no authentication beyond what the inverter applies to slave 200–204 writes. The
 indirect write reaches every BCU parameter and every module EEPROM, including the non-volatile

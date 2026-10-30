@@ -4,8 +4,9 @@ The SH10RS is Sungrow's 10 kW **single-phase hybrid** inverter. One box holds a 
 four MPPT inputs, a bidirectional DC/DC stage for a high-voltage battery, a grid port and a
 **backup (EPS) port** that keeps selected loads running when the grid fails. It reads the grid
 meter wired to its own meter port. It also talks to the battery's control unit over CAN and
-serves the battery's data to the dongle on its own RS-485 port. The smaller ratings of the SH-RS
-range probably run the same `SUNSTONE-H` firmware family. The pages in this directory
+serves the battery's data to the dongle on its own RS-485 port. The same `SUNSTONE-H` firmware
+covers the smaller SH-RS ratings: the power stage selects its ratings from the device code and
+carries entries for 3.0, 3.68, 4.0, 6.0, 8.0 and 10 kW. The pages in this directory
 describe the SH10RS with firmware package **SUNSTONE-H_B000.V002.P069** (ARM build
 `SUNSTONE-H_01011.02.69`). The example values come from a hybrid site (SH10RS with two SBR192
 stacks) behind a WiNet-S2.

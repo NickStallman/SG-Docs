@@ -72,9 +72,9 @@ directly. It keeps a model per module:
   gets it.
 - **The top end.** At the top the arithmetic does the pinning. The stack shows its fullest module
   once that reaches 95 %, reports 100 % from 99.01 % up, and stops accepting charge as soon as
-  any module is full. When it sees the battery charging at high voltage, the inverter also sends
-  a one-off command that probably sets every module to 100 %. It appears to be limited to
-  seven-module stacks.
+  any module is full. When it sees a seven-module stack charging at 502 V or more, the inverter
+  also sends a one-off command that sets every module's SOC to 100 %. Six-module stacks never
+  receive it.
 
 The stack SOC blends the lowest and highest module. Above 95 % it follows the highest module and
 below 6 % the lowest; in between it stretches the lowest module's value so the two ends meet. The

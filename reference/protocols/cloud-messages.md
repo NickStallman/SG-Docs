@@ -77,13 +77,13 @@ are in [device-types-and-grid-profiles.md](../devices/device-types-and-grid-prof
 | 46 | 51 | EV charger |
 | 92 | 92 | Energy Bridge (see [ev-charger-and-energy-bridge.md](../devices/ev-charger-and-energy-bridge.md)) |
 | 34 | 46 | Subordinate Sungrow logger |
-| 8 | 4 | Plant equipment (probably a combiner box) |
+| 8 | 4 | Combiner box |
 | 9 | 21 | Plant equipment |
-| 11 | 5 | Plant equipment |
-| 20 | 5 | Plant equipment |
+| 11 | 5 | Environment detector |
+| 20 | 5 | Weather station |
 | 12 | 19 | Plant equipment |
-| 13 | 6 | Plant equipment |
-| 14 | 27 | Plant equipment |
+| 13 | 6 | Box transformer |
+| 14 | 27 | Tracker |
 | 16 | 10 | Plant equipment (cloud type 10 is also used for optimizer groups) |
 | 29 | 10 | Plant equipment |
 | 22 | 32 | Plant equipment |
@@ -553,7 +553,8 @@ publishes the recording on this topic. Task setup and fields are in
 
 Exceptions to the constant:
 
-- **Battery stacks.** Bit 108 (byte 13, mask `0x10`) follows bit 4 of the stack's register 10705.
+- **Battery stacks.** Bit 108 (byte 13, mask `0x10`) follows bit 4 of the first word of the stack's
+  8-byte status block (register 10705).
   It is cleared if that register cannot be read. The WiNet-S does not adjust this bit.
 - **Meters.** A meter has no bitmap of its own. The WiNet-S2 sends all zeros for it. The WiNet-S sends
   no `propertydata` for a meter at all.
@@ -601,7 +602,7 @@ Attribute points (`propertydata`):
 | 23275 | Modbus TCP server enabled | 1 |
 | 23281 | Unknown | 0 |
 | 23284, 1246 | Remote-control mask (two copies) | 1279 (S2), 1263 (S) |
-| 29807 | Probably the time source | 3 |
+| 29807 | Time source (3 = iSolarCloud, the default; see [rs485-master.md](rs485-master.md#clock-synchronisation)) | 3 |
 
 Run points (`rundata/5min`):
 
@@ -610,6 +611,6 @@ Run points (`rundata/5min`):
 | 23001, 23008, 23015, 23209 | Cellular signal, SIM ICCID, network details, operator. These are not used on WiNet hardware: the strings are dropped and 23001 reads 0. On the WiNet-S the ICCID is point 23004. |
 | 23012 / 23013 | RS-485 frames sent / dropped |
 | 23014 | Wi-Fi signal strength, dBm |
-| 23016 | Ethernet link (1 = up) |
-| 10037 | Number of devices under the logger |
+| 23016 | Ethernet link state: 1 = cable linked, 0 = down |
+| 10037 | Number of devices under the logger; communication devices (dongle device type 23) are not counted |
 | 10038 | Number of devices with an active fault. Only devices of dongle device type 1 (string-inverter family) and EV chargers are counted; hybrids and batteries never are. |

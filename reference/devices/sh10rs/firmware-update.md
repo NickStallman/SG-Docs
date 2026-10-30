@@ -74,7 +74,7 @@ the controller's own goes to its bootloader through boot tags instead of being r
 | 22 | LG pack (B variant), when an LG RS-485 battery is detected | second RS-485 terminal, 115200 | LG pack | no |
 | 27 | LG pack (D variant) | second RS-485 terminal, 9600 | LG pack | no |
 | 32, 38, 39, 40 | optimizer and MLPE modules | optimizer serial link, 115200 | module | yes |
-| 74 ('J') | meter-port device | meter port | 246 | – |
+| 74 ('J') | Energy Bridge | meter port, 9600 | 246 | no |
 
 "Inverter stopped": when the dongle opens a session for one of these codes, the controller adds a
 firmware-update stop request to its run/stop arbiter, which writes the stop command (0xCE) to the
@@ -154,7 +154,7 @@ could not be applied even if the controller accepted it.
 | Effect on the batteries | Every complete 0x1F0 request with address 1 puts **every BCU on the bus** into its update state: contactors open and periodic transmissions stop. Only the master BCU answers. The batteries are therefore offline for the whole update |
 | On the BCU | The master stages the image in its own flash, checks it with the same hardware CRC, hands it to the other stacks over the BCU-to-BCU bus, shuts down safely and restarts about 17.5 s after the last hand-over. It reports stage 4 when it comes back; a failed hand-over is reported as stage 3 |
 | Duration | Roughly 40 to 50 ms per 208-byte packet (29 CAN frames plus the reply and pacing), one to two minutes for a battery image, plus the hand-over and restart |
-| Afterwards | The controller resumes its battery frames and restarts the battery handshake at once. A peer stack can stay in its update state, contactors open, until its own 10-minute idle limit expires (probably) |
+| Afterwards | The controller resumes its battery frames and restarts the battery handshake at once. Every BCU resets itself 10 minutes after its last update frame if its update flags are still set, so a peer stack whose flags the resumed frames do not clear stays in its update state, contactors open, for about 10 minutes after the master reports success (derived from the firmware, not observed) |
 
 ## Optimizer and MLPE modules
 
@@ -163,18 +163,35 @@ inverter is stopped for these sessions. The dongle-to-optimizer private relay on
 closed for the whole session, so the two update masters cannot interleave on it. See
 [../optimizers-and-mlpe.md](../optimizers-and-mlpe.md).
 
-## Meter-port device 'J'
+## Energy Bridge ('J')
 
-Code 74 (the character 'J') is relayed to address 246 on the meter port, the address of an
-Energy Bridge (presumably the target), with its own small set of descriptor, data and status registers on that device
-rather than the mailbox protocol above. A write of 0x55 to its descriptor register aborts. See
-[../ev-charger-and-energy-bridge.md](../ev-charger-and-energy-bridge.md).
+Code 74 (the character 'J') is relayed to address 246 on the meter port, the Energy Bridge. The
+name check uses the firmware-version string the bridge reported when the inverter identified it,
+so a 'J' image is accepted only while a bridge is known (and neither the parallel link nor
+whole-home backup is on). The inverter keeps running. The relay is not the mailbox protocol above
+but a small register set on the bridge, all Modbus RTU to address 246:
+
+| Step | Frame | Content |
+|---|---|---|
+| Descriptor | function 16, 17 registers from 0x10CF | command 0x00AA, the module string (20 bytes), CRC-32 and length (u32 each, low word first), packet size 1024, packet count |
+| Status | function 3, 3 registers from 0x10CC | the bridge's state (2 = ready for data, 5 = done, 4 = failed) and a 32-bit result word, polled at most once per second |
+| Data | function 16 from 0x10E0 | packet number, byte length, then up to 1024 image bytes; the offset follows from the packet number. The byte-count field of a full packet overflows to 0x04, so the bridge has to go by the register count |
+| Abort | function 16, 0x10CF = 0x0055 | sent after three consecutive timeouts |
+
+The image goes out plaintext without its trailer. Its CRC-32 is the standard (zlib) CRC-32, not
+the STM32 hardware CRC used for the other modules. A bridge that answers state 4 (failed) ends the
+job with stage 7 and error bit 0x400 rather than stage 3.
+
+Whenever a bridge has been identified, the inverter also announces every update session to it: a
+function 6 write of 0x1006 = 0x00AA when a session starts, and 0x0055 when a CAN or optimizer relay
+ends. See [../ev-charger-and-energy-bridge.md](../ev-charger-and-energy-bridge.md).
 
 ## LG battery packs
 
 LG packs are updated over the second RS-485 terminal by a separate step machine (115200 baud for
 the B variant, 9600 for the D variant), in the slot where the controller otherwise polls the DSP.
-Each step waits for a reply and retries a few times; the result is written straight into the
+The frames are Modbus-style with a CRC-16 (function 16 writes to register 0x01F5 for the B variant
+and 0x02EF for the D variant). Each step waits for a reply and retries a few times; the result is written straight into the
 controller's mailbox stage (4 success, 3 failure). The internal CAN relay is not switched off for
 these codes, so the controller also offers the LG image to the DSP address; the dongle sees the
 result of whichever finishes last.
@@ -182,4 +199,4 @@ result of whichever finishes last.
 ## Not yet known
 
 - How the AFCI board activates a new image.
-- The register layout and timing of the 'J' relay and of the LG pack update.
+- The meaning of the LG pack update frames, and what the Energy Bridge does with the 0x1006 notice.

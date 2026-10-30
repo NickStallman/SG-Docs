@@ -16,7 +16,7 @@ Firmware behaviour on top of this hardware is in [boot-and-runtime.md](boot-and-
 |---|---|
 | SoC | Espressif ESP32-S3, revision v0.2, dual-core Xtensa LX7 |
 | Internal flash | 16 MB GigaDevice (JEDEC ID `0xC84018`), DIO mode, 80 MHz |
-| PSRAM | 8 MB, octal (an N16R8-class part: 16 MB flash, 8 MB octal PSRAM) |
+| PSRAM | 8 MB, octal, clocked at 80 MHz (an N16R8-class part: 16 MB flash, 8 MB octal PSRAM) |
 | External flash | 32 MB SPI NOR (JEDEC ID `0xC84019`, GigaDevice GD25Q256 class) |
 | Ethernet | WIZnet W5500 SPI Ethernet controller on its own SPI host |
 | RS-485 | UART1 with a driver-enable line, 9600 baud 8N1 |
@@ -235,7 +235,7 @@ blocked by the LEDs on GPIO19/20.
 
 | Item | Value |
 |---|---|
-| Second-stage bootloader | at flash offset `0x0`, an ESP-IDF 4.4-series build |
+| Second-stage bootloader | at flash offset `0x0`, an ESP-IDF v4.4.1 build |
 | Application | ESP-IDF 5.x-era build, two OTA slots |
 | App rollback | enabled in the bootloader; the application marks a new slot valid after 30 s of uptime |
 | Secure Boot / flash encryption | off; the flash reads back in plain text and an unsigned image boots |

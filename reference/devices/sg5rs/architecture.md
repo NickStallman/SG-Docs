@@ -38,7 +38,7 @@ meter.
 | USART2 | Slave. Probably the dongle port. Downstream side of the relay (section 5) | from the saved serial settings, default 9600 8N1 | 3, 4, 6, 0x10, 0x60, 0x65 | Own address; broadcast writes executed but not answered |
 | USART3 | Slave. Second RS-485 port for an external master. Origin of the relay (section 5) | from the saved serial settings, default 9600 8N1 | 3, 4, 6, 0x10, 0x60, 0x65 | Own address |
 | USART4 | Master. The meter port: the inverter polls its own grid meter ([meters](../meters.md)) | 9600 8N1 | — | — |
-| USART6 | Slave and master. Link to the MLPE-CSU optimizer controller (section 9) | 115200 baud, set at boot | 4 (register reads); 3, 0x10, 0x17 taken as replies to the controller's own requests; 6 ignored | Own address |
+| USART6 | Slave and master. Link to the MLPE-CSU optimizer controller (section 9) | 115200 baud, set at boot | 4 and 6 (register reads and single-register writes, through the normal dispatchers); 3, 0x10, 0x17 taken as replies to the controller's own requests | Own address |
 
 Differences from the SH10RS, whose second RS-485 port also carries a parallel (master-slave) link, an EV-charger
 master and an RS-485 battery master: the SG5.0RS has none of these. It also has no function `0x17` and no function
@@ -237,7 +237,8 @@ back to its saved rate. Only the WiNet-S2 sends these codes ([optimizers and MLP
 
 ### 9.2 Modbus traffic with the CSU
 
-USART6 is also a slave port: the CSU can read inverter registers through it with function 4. Function 3 and 0x10
+USART6 is also a slave port: the CSU can read inverter registers through it with function 4 and write single
+registers with function 6, both served by the same dispatchers as the RS-485 ports. Function 3 and 0x10
 frames on this port are taken as replies to the controller's own firmware-transfer requests, and function 0x17 frames
 as replies to its module poll.
 The controller is in turn a master towards the CSU: it relays MLPE firmware images to the CSU at address 1 and polls the
@@ -288,10 +289,10 @@ group: level 1 for DRM1–DRM4, level 2 for DRM5–DRM8.
 | Evaluation | Every main-loop pass (about 5 ms); acts only when the state changes, no debounce |
 | DRM0 | Raises an event |
 | DRM1–DRM4 | No action (a string inverter has no consumption to limit) |
-| DRM5 / DRM6 / DRM7 / DRM8 | Generation limit 0 % / 50 % / 75 % / 100 % of rating |
+| DRM5 / DRM6 / DRM7 / DRM8 | Generation limit 0 % / 50 % / 75 % / 100 % of rating. The controller places it, clipped to the configured limit, in the power-limit ratio (31205) of the power-limitation block it pushes to the power stage, but only while active power limitation (holding 31204) is 170. With 31204 at 85 the configured ratio is pushed unchanged, so the command then has no effect on output |
 | No recognised command | Event cleared, state 255 |
 | State register | Input 5503, served directly: 1–9 = DRM0–DRM8; 255 = disabled, unsupported country, or enabled with no recognised command (the three cannot be told apart) |
-| Limit reason | Input 5506, copied from the power stage. On this model the power stage has no DRM reason code of its own: it receives the DRM limit through the power-limit ratio (section 7) and reports an active-power limitation (2) for it, so a DRM5–DRM8 limit does not read as 512 unless the controller substitutes that value, which has not been confirmed |
+| Limit reason | Input 5506, copied from the power stage. On this model the power stage has no DRM reason code of its own: it receives the DRM limit through the power-limit ratio (section 7) and reports an active-power limitation (2, running state 0x8200) for a DRM5–DRM7 limit; DRM8 (100 %) sets no reason. The controller passes the value through (it only clears a value of 1 under one internal condition) and never substitutes 512 |
 | Failed read or all-low inputs | Decodes as DRM0, so enabling DRM without a DRED connected probably stops the inverter |
 
 The SH10RS, by contrast, also limits consumption for DRM1–DRM3, sets a power factor for DRM3 and DRM7, reports 254 for
@@ -320,6 +321,3 @@ The relay path is on [../../firmware-update/device-firmware-relay.md](../../firm
 - Whether a read that crosses a window end answers 0xFFFF on every handler.
 - The upper bound of the DSP-forward hold time (the lower bound is 10 s).
 - The exact part behind USART1 and PA12 (a Bluetooth module is the evident peer).
-- Whether the controller substitutes the DRM limit into its power-stage frame while the active-power-limit function
-  is disabled. The power stage itself ignores the enable switch (31204) and always applies the ratio it holds, so
-  the answer depends on the controller alone.

@@ -104,8 +104,11 @@ remaining ticks only if an hour has passed since the last one.
 While a tunnel or firmware relay holds the bus in stream mode these frames are not sent.
 
 The maintenance requests start one of two BCU procedures from the inverter's holding registers:
-33061 = 0xAA a discharge to 0 % then charge to the target (probably an SOC calibration), 33060 =
-0xAA bring the SOC to the target and hold it for the set hours. Only one can be on at a time. The
+33061 = 0xAA: the BCU lifts its discharge cut-off and emergency-charge thresholds, discharges to
+0 % and then charges to the target, and afterwards sets the thresholds to their factory values
+(5.00 % and 3.00 %) rather than the values in force before, which amounts to an SOC calibration by
+full discharge. 33060 = 0xAA: bring the SOC to the target and hold it for the set hours (the BCU
+gives up after 24 h). Only one can be on at a time. The
 BCU reports progress in frame 0x012, which the inverter serves on its own address at 10752–10756
 (done flag, results of the two procedures, time estimate, hold time left). Writing 0x55 ends a
 procedure.
@@ -160,8 +163,8 @@ The sub-frames of 0x0F:
 | Index | Bytes 2–3 | Bytes 4–5 | Bytes 6–7 |
 |---|---|---|---|
 | 0 | rated capacity (10698) | maximum discharge power (10697) | rated power (10696) |
-| 1 | hours under low-temperature alarm (10695) | hours charging under that alarm (10694) | BCU counter sum (10693) |
-| 2 | lifetime charge Ah, u32 over bytes 2–5 (10691–10692) | | cycle-derived value (10690) |
+| 1 | hours under low-temperature alarm (10695) | hours charging under that alarm (10694) | deep-discharge count (10693) |
+| 2 | lifetime charge Ah, u32 over bytes 2–5 (10691–10692) | | internal resistance of the stack, 0.1 mΩ (10690; a model from cell count and cycle count, not a measurement) |
 | 3 | lifetime discharge Ah, u32 (10688–10689) | | discharge/charge Ah ratio (10687) |
 | 4 | cycle count × 10, u32 (10685–10686) | | byte 6 SOC-calibration state (10684), byte 7 balancing state (10683) |
 | 5 | module 1 SOC (10675) | module 2 SOC (10676) | module 3 SOC (10677) |
@@ -179,8 +182,8 @@ that stack's record. It never forwards these reads.
 | 10665 | stack nominal energy, 0.01 kWh | k = 0x07 |
 | 10666 | request flags (charge prohibited, discharge prohibited, forced charge) | 0x05 |
 | 10667–10674 | protection and warning words as hex text, one byte per register | 0x00 |
-| 10675–10698 | module SOCs, balancing and calibration state, cycle count, lifetime Ah, ratings | 0x0F sub-frames |
-| 10699–10701, 10705 | BCU constants | 0x0D, 0x0E |
+| 10675–10698 | module SOCs, balancing and calibration state, cycle count, lifetime Ah, internal resistance, deep-discharge count, ratings | 0x0F sub-frames |
+| 10699–10701, 10705 | BCU constants: a 32-bit capability word (15) at 10699, and the values 15 and 7 at 10701 and 10705 | 0x0D, 0x0E |
 | 10702–10704, 10706–10708 | 0 | – |
 | 10709 | stack online flag | set by 0x08 |
 | 10710 | stack model code | 0x05 |
@@ -279,5 +282,5 @@ The inverter's cyclic DSP poll pauses while an export runs. The 0x1D0 tunnel car
 
 ## Not yet known
 
-- The model of the LG packs on RS-485 and the format of their update.
-- The meaning of the BCU fields behind 10690, 10693, 10699, 10701 and 10705.
+- The model of the LG packs on RS-485 and the meaning of the frames of their update.
+- The bit meanings of the capability word at 10699 and the purpose of the constants at 10701 and 10705.

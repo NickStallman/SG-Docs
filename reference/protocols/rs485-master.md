@@ -74,7 +74,7 @@ each request the task:
 | Parameter | Inverter | Battery stack, EV charger, Energy Bridge | Meter and other bus devices |
 |---|---|---|---|
 | Gap before each request | 18 ms | probably 18 ms | 1 ms |
-| Response timeout | 2000 ms | 2000 ms | probably 2000 ms |
+| Response timeout | 2000 ms | 2000 ms | 2000 ms |
 | Retransmissions | none | none | none |
 | Consecutive lost frames to go offline | 10 | 10 | 20 |
 | Word order of 32-bit values | low word first | low word first | low word first for the built-in meter tables; per template otherwise |

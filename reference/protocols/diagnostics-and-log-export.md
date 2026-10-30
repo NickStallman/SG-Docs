@@ -72,8 +72,9 @@ Sequence:
    capability check before the raise. Before the trigger it keeps a ring of `20000 / saveCycle`
    samples (20 s).
 2. **Trigger.** The inverter manager watches the power-limitation-reason value it polls from the
-   inverter. When it becomes 0x0801 (most likely the under-frequency response) the capture starts; when it leaves
-   0x0801 the trigger clears.
+   inverter. When it becomes 0x0801 the capture starts; when it leaves 0x0801 the trigger clears. The
+   SH10RS reports 0x0801 while its power stage flags an over- or under-frequency derating and register
+   31214 holds 0xAA; the code is not in Sungrow's published value list.
 3. **Capture.** Every `saveCycle` ms one sample of each point is taken from the latest polled
    values (so a sample is only as fresh as the polling of that register). Every `uploadCycle`
    seconds the queues are published. After `durations` seconds the capture ends and waits; when the
@@ -295,8 +296,8 @@ sequenceDiagram
 
 A battery has no RS-485 link of its own: the dongle addresses the request to the battery's parent
 inverter. The inverter accepts these codes only when it runs the Sungrow battery protocol. The four
-codes correspond to the battery's run, fault, event and fault-upload records (probably in that
-order), stored as `BatRunRecord_…`, `BatFaultRecord_…`, `BatEventRecord_…` and
+codes select the battery's run log (0xB1), fault log (0xB2), event log (0xB3) and fault-upload
+records (0xB4), stored as `BatRunRecord_…`, `BatFaultRecord_…`, `BatEventRecord_…` and
 `BatFaultUpload_packet_01.txt`. The SBR192 control unit reports support for all four. The CAN side
 is described in [../devices/sbr192/can-bus.md](../devices/sbr192/can-bus.md) and
 [../devices/sh10rs/battery-interface.md](../devices/sh10rs/battery-interface.md).

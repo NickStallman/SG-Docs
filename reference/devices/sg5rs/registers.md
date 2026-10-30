@@ -95,9 +95,11 @@ a rapid shutdown), 0x1400 (standby), 0x1500 (emergency stop), 0x1600 (starting),
 0x8100 (derating), 0x8200 (running at the dispatched power limit), 0x9100 (running with an alarm)
 and 0xA100 (waiting for PV power). The active-power limit the
 controller pushes down is kept by the power stage in 0.1 % steps in RAM only, with 110 % meaning
-"no limit", so 5007 / 5008 revert after a power-stage restart. The power stage names every fault
-and event internally and serves the names of the last four faults as text; the numeric codes are
-listed in [error codes](../../appendix/error-codes.md#inverter-fault-codes-sg50rs).
+"no limit", so 5007 / 5008 revert after a power-stage restart. A DRM5–DRM7 command
+([architecture](architecture.md#12-drm-inputs)) is applied through the same ratio, and only while 31204
+(active power limitation) is 170; the power stage itself ignores 31204 and 31203 (retain after
+power-off). The power stage names every fault and event internally and serves the names of the last
+four faults as text; the numeric codes are listed in [error codes](../../appendix/error-codes.md#inverter-fault-codes-sg50rs).
 
 **The PV variant.** The AS/NZS 4777.2:2020 options of the `unit` settings template come in two variants, chosen by
 input register 5479: values 1 and 2 select the PV variant (39 register runs, 111 registers), values 3 to 6 the
@@ -112,7 +114,7 @@ country to 32310, the standard to 30036, then the variant's register runs in tem
 | 2792–2799 | The masked session key of the encrypted Bluetooth link; readable in clear with function 4 on every port ([architecture](architecture.md#8-encrypted-serial-link-on-usart1-phone-app-over-bluetooth)) |
 | 4815 | The inverter's own slave address; served on USART1 only |
 | 4990–5000 | Serial number and device type, the one block (besides 2792) readable in clear on USART1 |
-| 5506 | Power-limit reason, copied from the power stage. This model's power stage emits 0 (none), 1 (over-temperature or volt-watt derating), 2 (active-power limitation; also how a DRM limit applied through the power-limit ratio appears), 8 (over-frequency), 32 (soft start), 256 (volt-watt), 2048 (under-frequency) and 36864 (generation limit); it never emits 4 or 512 itself |
+| 5506 | Power-limit reason, copied from the power stage. This model's power stage emits 0 (none), 1 (over-temperature or volt-watt derating), 2 (active-power limitation; also how a DRM5–DRM7 limit applied through the power-limit ratio appears), 8 (over-frequency), 32 (soft start), 256 (volt-watt), 2048 (under-frequency) and 36864 (generation limit); it never emits 4 or 512, and the controller passes the value through except that it clears a value of 1 under one internal condition |
 | 5519 | AFCI (arc-fault) trip count |
 | 32538 (holding) | PAN id of the dormant power-line-modem configuration |
 

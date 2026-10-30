@@ -120,9 +120,9 @@ send delay come from the device's poll settings.
 | 10303 / 10383 | 1 | ignored | 0x76 (Sungrow private write) |
 | 10303 / 10383 | absent or ≠ 1 | ignored | 0x10, even for one register |
 
-The WiNet-S parses `mode` but ignores it: reads are always 0x03/0x04 and writes always 0x10. The
-private codes 0x76/0x77 use the same PDU layout as 0x10/0x03; see
-[modbus-function-codes.md](modbus-function-codes.md).
+The WiNet-S parses `mode` but ignores it: its reads use 0x04 or 0x03 by `readOnly` and its writes
+always use 0x10; it has no builder for the private codes. The private codes 0x76/0x77 use the same PDU
+layout as 0x10/0x03; see [modbus-function-codes.md](modbus-function-codes.md).
 
 Word order follows the device's byte-order setting, which defaults to **low word first** for
 inverters and batteries: 16-bit values are correct, 32-bit values have the first register as the
@@ -143,7 +143,9 @@ low word, and 64-bit values (four registers) come out byte-reversed in both dire
 | "11", "12" | other / string | 1 | 0, no reply | "12": one character only |
 
 `dataType` must be a JSON string; a numeric value makes the point fail to parse and the command
-gets no reply. Only types "3" to "6" are safe for writes. The WiNet-S handles types 1–6 only.
+gets no reply. Only types "3" to "6" are safe for writes. The WiNet-S handles types "1" to "6" only: a
+read of type "5" or "6" covers two registers and any other type one; a read of type "7" or above returns
+an empty `readValue`, and a write of type "7" or above is sent without being encoded.
 
 ### Per-point result codes
 

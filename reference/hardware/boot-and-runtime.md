@@ -10,7 +10,7 @@ The [WiNet-S](winet-s.md) and [WiNet-S2](winet-s2.md) behave the same except whe
 | Stage | WiNet-S | WiNet-S2 |
 |---|---|---|
 | ROM bootloader | ESP32 ROM; GPIO0 low at reset enters serial download | ESP32-S3 ROM; same |
-| Second-stage bootloader | ESP-IDF bootloader at `0x1000` | ESP-IDF 4.4-series bootloader at `0x0` |
+| Second-stage bootloader | ESP-IDF bootloader at `0x1000` | ESP-IDF v4.4.1 bootloader at `0x0` |
 | Slot choice | from `otadata`, with app rollback | same |
 | Application start-up | ESP-IDF 5.x-era start code: heap including PSRAM, event loop, network interface layer, TCP/IP thread | same, plus a boot memory test of the 8 MB PSRAM |
 
@@ -132,16 +132,17 @@ After start-up the main function runs a loop every **3 s**:
 
 | Every pass | Action |
 |---|---|
-| Memory | read free and total internal RAM and PSRAM; log a warning above a usage threshold |
+| Memory | read free and total internal RAM and PSRAM; log a warning when either is 85 % or more used |
 | Clock | read the real-time clock and check it is plausible (year 1971 to 2069) |
-| Low-memory reset | if the clock is valid, the time is exactly on the hour at **00:00, 01:00, 02:00, 03:00 or 04:00**, and free internal RAM or free PSRAM is below a threshold, log the reason and restart |
+| Low-memory reset | if the clock is valid, the time is exactly on the hour at **00:00, 01:00, 02:00, 03:00 or 04:00**, and free internal RAM or free PSRAM has fallen below 3 KiB (3072 bytes), log the reason and restart |
 | Chip watchdog | feed the ESP32 main watchdog (WiNet-S) |
 | CPU load | sample per-task run time and compute the load of each core and in total; log it every 20th pass when enabled |
 | Storage | log a warning if a LittleFS volume is 90 % full |
 | Heartbeat | log a "running" line every 600 passes (30 min) |
 
 The low-memory restart is confined to the small hours, so a dongle that is slowly running out of
-memory restarts at night rather than in the middle of a production day. The reset reason is logged at the start of
+memory restarts at night rather than in the middle of a production day. The 3 KiB limit and the
+85 % warning level are the same on both boards. The reset reason is logged at the start of
 every boot.
 
 ## Watchdogs
@@ -184,7 +185,7 @@ The firmware is ESP-IDF plus open-source libraries plus Sungrow's own applicatio
 
 | Component | Version | Role |
 |---|---|---|
-| ESP-IDF | 5.x-era application build; the WiNet-S2 bootloader reports a 4.4-series build | SDK, drivers, Wi-Fi, Ethernet, OTA, NVS, core dump, HTTP server |
+| ESP-IDF | 5.x-era application build; the WiNet-S2 bootloader is a v4.4.1 build | SDK, drivers, Wi-Fi, Ethernet, OTA, NVS, core dump, HTTP server |
 | FreeRTOS | ESP-IDF's SMP port | scheduler |
 | mbedTLS | as shipped with ESP-IDF | TLS for the cloud link, the HTTPS server and Modbus TCP over TLS |
 | lwIP | as shipped with ESP-IDF, extended with per-interface DNS servers | TCP/IP stack, DHCP client and server, SNTP |
@@ -200,6 +201,3 @@ mbedTLS sockets. There is no Espressif MQTT component, no wolfSSL and no protobu
 used on some links is custom. Cloud payloads are compressed in zlib format (RFC 1950)
 ([../protocols/cloud-envelope.md](../protocols/cloud-envelope.md)).
 
-## Not yet known
-
-The exact low-memory thresholds of the night-time restart are not yet known.

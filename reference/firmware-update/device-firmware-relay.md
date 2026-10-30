@@ -211,7 +211,7 @@ The inverter reports failure by setting stage 3 and an error-flag word at 1-base
 | `0x02` | login token mismatch |
 | `0x04` | session inactivity timed out |
 | `0x08` | IAP sequence or version mismatch seen by the relay |
-| `0x10` | relay target not accepted |
+| `0x10` | relay target not accepted (never raised by the SH10RS, whose relay accepts every module code) |
 | `0x20` | module name does not match any of the inverter's modules |
 | `0x40` | version not newer (when the "not newer" check is enabled) |
 | `0x200` | staged-image CRC-32 differs from the declared value |

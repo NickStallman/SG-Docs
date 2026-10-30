@@ -21,7 +21,7 @@ Modbus documentation.
 ## WiNet-S
 
 - The location of the UART0 pads (GPIO1 TX, GPIO3 RX) on the WiNet-S board is not recorded.
-- The size and type of the WiNet-S PSRAM are not confirmed.
+- The size of the WiNet-S PSRAM is not known.
 - Is the RS-485 driver-enable line on GPIO12 (also the flash-voltage strapping pin) pulled up or down at boot? A pull-up would select 1.8 V flash.
 - Does the button input on GPIO36 (input-only, no internal pull) have an external pull-up?
 
@@ -38,10 +38,8 @@ Modbus documentation.
 - What does the multi-unit link configured at register 36110 do?
 - The controller's rules for validating writes to holding registers 30000–36000 are not fully known (the power stage's own fixed ranges are).
 - Which conditions raise inverter fault codes 210–211 and 303–304? The other first-level codes are listed in [error-codes.md](error-codes.md#inverter-fault-codes-sh10rs).
-- What units do input registers 5622 and 5623 (the export-limit range) use? They are not watts.
-- Does an immediate read-back after a write already return the new value?
-- Do the forced charge/discharge command and power registers read back as written when the inverter is not in forced mode?
-- Which installer settings enable the inverter's periodic automatic I-V scan?
+- Does an immediate read-back after a write to a holding register in 30000–36000 return the new value? (Writes to the 13000–13370 window do read back at once.)
+- Which holding registers hold the automatic I-V scan options, the schedule of work mode 9 (scheduled forced mode) and the switch that enables the external-EMS countdown at 13080?
 
 ## SG5.0RS
 
@@ -53,7 +51,7 @@ Modbus documentation.
 - The meaning of several battery protection ids is unknown.
 - The peer on the far end of the CAN 0x5F0 tunnel is not identified.
 - What is wired to the battery control unit's USART3 status port is not identified.
-- Is 13119 on protocol-type-5 inverters also in 0.1 kWh, like 5637?
+- Is 13119 on protocol-type-5 inverters in 0.1 kWh, like 5637, or in Wh? Sungrow's app table says 0.1 kWh, the dongle's web UI catalogue says Wh; no live read is available.
 
 ## Other devices
 
@@ -63,7 +61,7 @@ Modbus documentation.
 - What does Energy Bridge register 4162 hold? Four other Energy Bridge values have no name either.
 - On protocol-type 1/4 inverters, is the total yield at 5004 in 1 kWh or 0.1 kWh?
 - On protocol-type 1/4 hybrids, which of the protection registers 30500, 30643 and 30646 exist?
-- Which register starts and stops a protocol-type 4 inverter (30045?), a protocol-type 5 hybrid (13000?) and a protocol-type 2 hybrid (5006?)?
+- Whether a protocol-type 4 inverter, a protocol-type 5 hybrid and a protocol-type 2 hybrid honour the start/stop registers the dongle addresses on them (30045, 13000 and 5006, 0xCF start / 0xCE stop).
 - For larger inverters, the names of MPPT inputs 13–20 and strings 25–40 are not confirmed by any Sungrow document.
 - On protocol-type 5 hybrids, are Modbus TCP registers 13001, 13010, 13017, 13036, 13045 and 5214 populated? The dongle fills them from different poll values than on other protocol types.
 - Is the forced charge/discharge power in watts on every hybrid model? Some Sungrow documents give it in percent.
@@ -78,7 +76,6 @@ Modbus documentation.
 - How does the cloud reassemble a chunked rundata message: in packet-id order?
 - The exact timing of the server-switch confirm and rollback timers is not confirmed.
 - What range of rundata upload periods and quiet hours does the dongle accept?
-- Does the dongle answer a cloud parameter read for a device that is offline?
 - What do several of the dongle's own logger-level values mean?
 - How does the dongle format meter float values in uploads?
 - Are string and hex values shorter than their field size zero-padded in uploads?
@@ -89,4 +86,4 @@ Modbus documentation.
 - Does the iSolarCloud update service decide offers from the firmware version string the dongle reports?
 - Does the dongle accept an update package that carries only the application image and leave the web-interface partition untouched?
 - Does the dongle grow the 3 MB web-interface image to fill its partition?
-- Whether every production batch ships with Secure Boot and flash encryption disabled.
+- Whether every production batch ships with Secure Boot and flash encryption disabled; the WiNet-S and WiNet-S2 examined both have them off.

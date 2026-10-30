@@ -260,9 +260,9 @@ firmware relay. Details are in [battery-interface.md](battery-interface.md).
 
 | Part | Bus | Holds |
 |---|---|---|
-| FRAM, about 32 KB | I2C, 200 kHz | Communication settings (slave address, RS-485 line settings), the registry that binds battery stacks to slaves 200–204, firmware-update progress and the received-packet bitmap (so an interrupted transfer resumes), parameter blocks (each with a CRC-8; some mirrored), small record rings. Most writes are queued to one storage task |
-| SPI NOR flash, 8 MB | SPI, about 21 MHz | The firmware staging window (992 KB starting at the 7 MB mark), run-record and history rings, fault and event records, and the battery record store fetched from the BCU. Records leave the inverter only through the YMODEM export |
-| Real-time clock | I2C | Epson RX-8025-family chip, BCD time registers, 24-hour mode. Set from the time the dongle sends; read at boot |
+| FRAM, about 32 KB (an FM31xx-family part, by its driver name) | I2C, 200 kHz, device address 0xA0, 16-bit addressing | Communication settings (slave address, RS-485 line settings), the registry that binds battery stacks to slaves 200–204, firmware-update progress and the received-packet bitmap (so an interrupted transfer resumes), parameter blocks (each with a CRC-8; some mirrored), small record rings. Most writes are queued to one storage task |
+| SPI NOR flash, 8 MB (a Winbond W25Q-series part, by its driver name) | SPI, about 21 MHz | The firmware staging window (992 KB starting at the 7 MB mark), run-record and history rings, fault and event records, and the battery record store fetched from the BCU. Records leave the inverter only through the YMODEM export |
+| Real-time clock | I2C, 200 kHz, address 0x64 | Epson RX-8025-family chip, BCD time registers, 24-hour mode. Set from the time the dongle sends; read at boot |
 | External watchdog | one GPIO | Pulsed every 500 ms by a supervisor task, alongside the MCU's independent watchdog (about 8 s). The supervisor watches the main loop and the storage task; a stalled main loop or storage process is restarted, and three misses in a row end in a deliberate system reset |
 | Status LEDs | timer PWM, two channels | off, on, blink and "breathing" patterns |
 
@@ -272,4 +272,4 @@ The board has no display and no keypad.
 
 - Which physical terminal each UART reaches.
 - Whether a CPLD is fitted at all, since the master DSP firmware has no path to one.
-- Part numbers of the watchdog supervisor and the exact FRAM and flash parts.
+- The part number and timeout of the watchdog supervisor, and the exact FRAM and flash parts within their families.

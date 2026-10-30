@@ -159,9 +159,12 @@ Routes that need **no token at all**: `/user/connect`, `/product/list`, `/device
 `/device/addWiMeter`, `/upload/*` (WiNet-S2), `/device/upgradeCheck/*` (WiNet-S2; the WiNet-S checks),
 `/system/upgradeCheck/*` and `/device/updateresult`. Routes with no table row and therefore open to a visitor
 token include every `/upgrade/*` route except `/upgrade/export`, `/iconfig/{deletepubkey,get_key,upgrade_result}`,
-`/historyfault/list` and `/system/{get,set}RemoteControl*`. Together these let an unauthenticated client upload and
-start a dongle firmware package; the package signature check ([Update channels](../firmware-update/update-channels.md))
-is then the only barrier. `/device/updateresult` never sends an HTTP reply at all.
+`/historyfault/list` and `/system/{get,set}RemoteControl*`. An unauthenticated client can therefore upload a dongle
+package and have it checked, but flashing an uploaded package (`/system/upgradeStart`) needs an administrator session.
+The visitor-accessible `/upgrade/systemUpgradeStart` flashes only the first package in the dongle's list of downloaded
+packages (cloud or iConfig downloads), verified against the key file shipped inside that package and with the
+downgrade check off; the package signature check ([Update channels](../firmware-update/update-channels.md)) is its
+only barrier. `/device/updateresult` never sends an HTTP reply at all.
 
 ## Typical session
 
@@ -261,7 +264,7 @@ The full families are `/about`, `/device`, `/download/log`, `/ethernet`, `/4g`, 
 | `/device/getInitParam`, `/device/xmlUpdate` | GET / POST | 2 | installer parameter pages built from the per-region settings templates ([below](#settings-template-fetch)) |
 | `/device/upgradeCheck/<name>`, `/device/upgradeStart` | POST | 3 | upload and start a connected-device firmware update ([Device firmware relay](../firmware-update/device-firmware-relay.md)); the upload needs no token on the WiNet-S2 |
 | `/system/upgradeCheck/<name>` | POST | none | upload a dongle `.sgu` package and run its check (wildcard route; no token check) |
-| `/system/upgradeStart`, `/upgrade/systemUpgradeStart` | POST | 3 / 0 | start the dongle update; `/upgrade/*` status routes mirror cloud-driven updates too ([Update channels](../firmware-update/update-channels.md)) |
+| `/system/upgradeStart`, `/upgrade/systemUpgradeStart` | POST | 3 / 0 | start the dongle update: `/system/upgradeStart` (`start` = 1) flashes the package uploaded and checked through `/system/upgradeCheck/*`; `/upgrade/systemUpgradeStart` takes no fields and flashes the first package in the dongle's downloaded-package list. The `/upgrade/*` status routes mirror cloud-driven updates too ([Update channels](../firmware-update/update-channels.md)) |
 | `/system/importPublicKey` | POST | 3 | replace the public key that verifies dongle packages, with its version label |
 | `/system/importCert`, `/system/getCertInfo` | POST | 3 | replace / show a certificate pair: `cert_type` 1 = HTTPS server, 2 = Modbus-TCP TLS server; `terminal_type` must be 1; `crt_data`, `key_data` = PEM text. The pair is validated and must match; error 118 = expired |
 | `/iconfig/*` | POST | 3 / 0 | browser-driven pull of a firmware package and trust key from a Sungrow iConfig tool on the LAN; the dongle acts as an HTTPS client to `https://<entered IP>:<20001…20901>/v2/web/*` and reports progress over the WebSocket |
@@ -394,5 +397,3 @@ The SG5.0RS appears as type 21, the SH10RS as type 35 and each SBR192 stack as t
 - The field names of the table-driven `list` / `update` routes (`/wifi`, `/ethernet`, `/4g`, `/serial`, `/local`,
   `/about`, `/system/{setValue,getValue}`).
 - When a client meets code 106 in practice.
-- Whether a package uploaded through the unauthenticated upload routes is the one `/upgrade/systemUpgradeStart`
-  installs.

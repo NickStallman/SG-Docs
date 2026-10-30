@@ -136,9 +136,9 @@ in between the formula stretches the lowest module's SOC so the two ends meet. M
 40.00 % and 50.00 % give 600 + 3400 × 8900 / 7900 = 4430, that is 44.30 %.
 
 On CAN the BCU sends the stack SOC in 0.01 % and sends **100.00 % once the blended value reaches
-99.01 %**. The inverter divides by 10, so **10744 is in 0.1 %**. When an internal flag is set the
-reported SOC is floored at the inverter's minimum SOC + 1 %; what sets that flag is not
-identified.
+99.01 %**. The inverter divides by 10, so **10744 is in 0.1 %**. A service flag floors the reported
+SOC at the inverter's minimum SOC + 1 %. Only the service map's indirect parameter write (selector
+code 0x102D, value 1) sets it; the BCU's own logic clears it again within minutes.
 
 The master stack computes the **system SOC** across stacks with the same blend (highest stack
 if ≥ 95.00 %, lowest if ≤ 6.00 %, else the formula), counting only the stacks in the best
@@ -193,8 +193,8 @@ Values 1 and 5 start capacity-mode balancing.
   **502.0 V** and the battery is charging at 0.3 A or more. The BCU treats 19759 as a dedicated
   action: it sets every module's SOC to the written value in 0.001 % (100000 = 100.000 %). A
   per-stack flag stops it repeating until the condition drops. 502.0 V over 140 cells is
-  3.586 V per cell, so it is probably a full-charge calibration for seven-module stacks (SBR224);
-  with a six-module master the condition never holds.
+  3.586 V per cell, near the top of an LFP charge: the write is a full-charge SOC calibration for
+  seven-module stacks (SBR224). With a six-module master the condition never holds.
 
 ## State of health
 

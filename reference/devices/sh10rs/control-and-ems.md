@@ -30,6 +30,11 @@ The SH10RS checks every write itself, whoever sends it.
 | Settings in 30000–36000 | checked twice: by the controller's per-register rule set (ranges and cross-register relations, not documented; the dongle's web UI enforces its own copy, see [grid-codes-and-drm.md](grid-codes-and-drm.md)), and then by a fixed acceptance range per register inside the power stage, which drops an out-of-range value silently while the write is still acknowledged |
 | 19101–20000 | forwarded to the battery control unit over CAN (function codes 3, 4 and 16; a function-6 write is forwarded but never answered, so it times out) |
 
+**Read-back.** A value accepted in the 13000–13370 window is stored before the echo is sent and
+served from the same field, so a read straight after the echo returns the new value. 13051 reads
+back as written in every EMS mode; 13052 and 13074 are kept in 10 W steps and read back rounded
+down to a multiple of 10 W.
+
 A few address windows are internal channels of the inverter rather than settings. Do not write
 to them from a client:
 
@@ -106,9 +111,10 @@ blocks a restart but does not stop a running inverter.
 
 | Reg | Meaning | Type, scale | Values / range | Live |
 |---|---|---|---|---|
-| 13050 | EMS (work) mode | u16 enum | 0 self-consumption (default), 2 forced mode, 3 external EMS, 4 VPP, 8 MicroGrid | 0 |
+| 13050 | EMS (work) mode | u16 enum | 0 self-consumption (default), 2 forced mode, 3 external EMS, 4 VPP, 8 MicroGrid, 9 scheduled forced mode | 0 |
 | 13051 | forced charge/discharge command | u16 enum | 0xAA (170) charge, 0xBB (187) discharge, 0xCC (204) stop | 0xCC |
-| 13052 | forced charge/discharge power | u16, 1 W | 0–10000 (up to the rating) | 10000 |
+| 13052 | forced charge/discharge power | u16, 1 W | 0–10600 accepted (106 % of the rating, for charge and discharge alike); stored in 10 W steps | 10000 |
+| 13080 | external-EMS / VPP countdown | u16, 1 s | 1–1000; set to 20 when mode 3 or 4 is selected | 0 |
 
 - **Self-consumption (0).** The inverter charges the battery from PV surplus and discharges it to
   cover the house load. The SOC window and the discharge time windows (below) apply.
@@ -117,12 +123,20 @@ blocks a restart but does not stop a running inverter.
   100 W, and bounds the request by the BMS current limits times the battery voltage and by the
   battery power caps 33047/33048 (at most 10 kW).
 - **External EMS (3) and VPP (4)** hand the power decisions to an outside controller.
-  - The inverter falls back to self-consumption when that controller goes silent.
-  - Modes 3 and 4 run on an internal countdown. It probably counts from the last command.
+  - Both run on the countdown at 13080. Selecting mode 3 or 4 sets it to 20; it counts down once
+    per second, and at zero the inverter returns to self-consumption (13050 = 0), sets 13051 to
+    stop (0xCC) and 13052 to 0. Rewriting the same mode, or writing 13051 or 13052, does not restart
+    it: the controller keeps the mode alive by rewriting 13080, which reads back the remaining time.
+  - The countdown runs only while an option byte in the same settings block as the
+    communication-interruption protection (31453) is 0xAA; that byte is mirrored at input 36527.
 - **MicroGrid (8)** is listed by the inverter's own option set.
   - In this mode the DRM function is forced off.
   - A write to the DRM enable is refused.
-  - The inverter also has an internal work mode 9 with no published label.
+- **Scheduled forced mode (9)** is accepted at 13050 but carried by no Sungrow document: twelve
+  discharge windows and twelve charge windows, each with a power, in two sets selected by a
+  day-of-week mask. Inside a window the battery discharges or charges at that power as in forced
+  mode; outside the windows the inverter runs self-consumption when one option is on and otherwise
+  holds the battery idle. The power stage treats it as forced mode (2).
 
 The order a controller usually writes is power (13052), then mode (13050), then command (13051).
 That way the battery never runs a forced command at a stale power.
@@ -160,9 +174,9 @@ self-consumption stops discharging there.
 
 | Reg | Meaning | Type, scale | Values / range | Live |
 |---|---|---|---|---|
-| 13074 | export power limit | u16, 1 W | within the range at input 5622–5623 | 10000 |
+| 13074 | export power limit | u16, 1 W | the value ÷ 10 must lie within input 5622–5623 (10 W units); stored in 10 W steps | 10000 |
 | 13087 | export (feed-in) limitation switch | u16 enum | 0xAA enable, 0x55 disable | 0xAA |
-| 13086 | related switch | u16 | 0xAA / 0x55 | 0xAA |
+| 13086 | a related switch; set to 0x55, together with the parallel-link enable, when 33509 is written with 0xA2–0xA4 | u16 | 0xAA / 0x55 | 0xAA |
 | 13075 | off-grid (backup) option | u16 enum | 0xAA enable, 0x55 disable | 0xAA |
 
 The "Power regulation" page of the dongle's web UI shows the same function as three settings:
@@ -199,9 +213,9 @@ the sum of the stacks' nominal energy.
 | 13003–13010 | load adjustment time windows and power | — | 0xFFFF (unused) |
 | 13011 | load on/off (on/off mode) | 0xAA on, 0x55 off | 0x55 |
 | 13017 | forced start-up under low SOC | — | — |
-| 13089, 13090 | active power limitation (hybrid) | — | — |
+| 13089, 13090 | active power limitation in Sungrow's published hybrid map | not implemented on P069: read 0xFFFF, accept only 0xFFFF | 0xFFFF |
 | 30043 | factory reset | — | do not write |
-| 30230 | global MPPT scan | 170 starts | an I-V curve scan of the PV inputs, one input at a time (about 25 s each) |
+| 30230 | global MPPT scan | 170 starts | an I-V curve scan of the PV inputs, one input at a time (about 25 s each). The controller can also start it by itself: with two option bytes at 170 it writes 30230 = 170 every n minutes, and a further option starts a scan at a set time of day; the registers behind these options are not identified |
 
 The dongle's web UI also has these energy-management and operation settings:
 
@@ -260,8 +274,6 @@ The dongle's cyclic poll covers the input registers on [registers.md](registers.
 
 ## Not yet known
 
-- Whether the forced command 13051 and power 13052 read back as written while the EMS mode is not 2.
-- The time-out of the external-EMS and VPP modes, and what selects internal work mode 9.
+- Which setting enables the 13080 countdown, and which registers hold the mode-9 schedule and the automatic I-V scan options.
 - What 13086 controls.
 - The controller's rule set for 30000–36000 (ranges and relations), beyond the copy the web UI enforces; the power stage's own fixed ranges are a second, silent filter.
-- The units and behaviour of 13089/13090 on the SH10RS.
