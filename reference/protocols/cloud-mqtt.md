@@ -141,8 +141,7 @@ The cloud moves a dongle to another broker with a logger-parameter command:
   rolls back.
 
 **Reply.** The dongle replies at once, before it switches. The reply carries `readResult` 1 and
-echoes the request value, key included. `sslFlag` is returned as a number. A request with fewer than
-three fields gets `readResult` 5.
+echoes the request value, key included. `sslFlag` is returned as a number.
 
 ```mermaid
 stateDiagram-v2
@@ -274,7 +273,7 @@ client id, in every topic, in every `messageId` and in `publicData.productSN`.
 | CONNACK wait | About 100 s (counted in 5 s steps). On timeout the session is closed. |
 | Outgoing idle | PINGREQ after 120 s without transmitting |
 | Incoming idle | The session is closed after 180 s (1.5 × keepalive) without receiving anything |
-| PUBACK / SUBACK wait | 20 to 25 s. On expiry the request is abandoned and never resent. |
+| PUBACK / SUBACK wait | 20 to 25 s. On expiry the request is abandoned; whether it is resent is not known. |
 
 A CONNACK with a non-zero return code is not acted on at once. The session is torn down by the
 CONNACK timeout.

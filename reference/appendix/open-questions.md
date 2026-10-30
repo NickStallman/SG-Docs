@@ -21,7 +21,6 @@ Modbus documentation.
 ## WiNet-S
 
 - The location of the UART0 pads (GPIO1 TX, GPIO3 RX) on the WiNet-S board is not recorded.
-- The size of the WiNet-S PSRAM is not known.
 - Is the RS-485 driver-enable line on GPIO12 (also the flash-voltage strapping pin) pulled up or down at boot? A pull-up would select 1.8 V flash.
 - Does the button input on GPIO36 (input-only, no internal pull) have an external pull-up?
 

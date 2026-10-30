@@ -13,7 +13,7 @@ and the button do, how a new dongle gets onto your network, and what a factory r
 | Chip | ESP32 (dual-core) | ESP32-S3 (dual-core) |
 | Firmware family | `WINET-SV200…` | `WINET-SV300…` |
 | Internal flash | 16 MB | 16 MB |
-| Extra RAM (PSRAM) | yes, quad SPI | 8 MB, octal SPI |
+| Extra RAM (PSRAM) | 4 MB, quad SPI | 8 MB, octal SPI |
 | External flash | 16 MB | 32 MB |
 | Ethernet | the chip's built-in Ethernet controller with an external PHY chip | a WIZnet W5500 Ethernet chip on an SPI bus |
 | Watchdog | the chip's own | an external supervisor chip as well |

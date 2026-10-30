@@ -78,8 +78,8 @@ long.
 - Chunk 1 is published at once.
 - Each continuation chunk is published when the PUBACK for the chunk before it arrives.
 - A message whose tail has not gone out within 120 s is abandoned.
-- A publish whose PUBACK does not arrive within 20 to 25 s is given up. Nothing is ever resent, by the
-  MQTT layer or by the application.
+- A publish whose PUBACK does not arrive within 20 to 25 s is given up. Whether it is then resent is
+  not known.
 
 Rundata adds one more level of pacing: each device gets its own message, and the next device's
 message goes out only when the previous one is acknowledged, or when its wait times out.

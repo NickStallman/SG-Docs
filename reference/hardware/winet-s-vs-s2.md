@@ -15,7 +15,7 @@ handful of device-support features that exist on only one model.
 | Cloud product type | `0x715` (1813) | `0x720` (1824) |
 | SoC | ESP32 (dual-core LX6) | ESP32-S3 (dual-core LX7) |
 | Internal flash | 16 MB | 16 MB |
-| PSRAM | quad, 80 MHz, size not known | 8 MB octal, 80 MHz |
+| PSRAM | 4 MB quad, 80 MHz | 8 MB octal, 80 MHz |
 | External SPI NOR | 16 MB | 32 MB |
 | Second-stage bootloader offset | `0x1000` | `0x0` |
 | `oemdata` (web UI) partition | 4 MB | 5 MB |
@@ -127,8 +127,7 @@ The WiNet-S has no such check.
 
 The WiNet-S2 has twice the external flash (32 MB versus 16 MB) and its LittleFS volume has twice the
 blocks (`0x2000` versus `0x1000`). Both boards run their PSRAM at 80 MHz, the same clock as the
-internal flash: the WiNet-S2 has 8 MB of octal PSRAM, the WiNet-S a quad PSRAM whose size is not
-known. The 4G APN text fields also differ
+internal flash: the WiNet-S2 has 8 MB of octal PSRAM, the WiNet-S 4 MB of quad PSRAM. The 4G APN text fields also differ
 in size (150/127/127 bytes on the S, 128/64/64 on the S2), although neither board has a modem.
 
 ### Identity and version constants

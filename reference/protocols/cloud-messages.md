@@ -611,6 +611,6 @@ Run points (`rundata/5min`):
 | 23001, 23008, 23015, 23209 | Cellular signal, SIM ICCID, network details, operator. These are not used on WiNet hardware: the strings are dropped and 23001 reads 0. On the WiNet-S the ICCID is point 23004. |
 | 23012 / 23013 | RS-485 frames sent / dropped |
 | 23014 | Wi-Fi signal strength, dBm |
-| 23016 | Ethernet link state: 1 = cable linked, 0 = down |
-| 10037 | Number of devices under the logger; communication devices (dongle device type 23) are not counted |
-| 10038 | Number of devices with an active fault. Only devices of dongle device type 1 (string-inverter family) and EV chargers are counted; hybrids and batteries never are. |
+| 23016 | Ethernet link state: 1 = cable linked, 0 = down; meaning inferred, not confirmed |
+| 10037 | Number of devices under the logger (meaning inferred, not confirmed); communication devices (dongle device type 23) are not counted |
+| 10038 | Number of devices with an active fault (meaning inferred, not confirmed). Only devices of dongle device type 1 (string-inverter family) and EV chargers are counted; hybrids and batteries never are. |

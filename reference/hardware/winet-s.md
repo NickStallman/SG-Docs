@@ -16,7 +16,7 @@ For the second-generation board see [winet-s2.md](winet-s2.md); the differences 
 |---|---|
 | SoC | Espressif ESP32 (ESP32-D0WD, revision v1.1), dual-core Xtensa LX6 |
 | Internal flash | 16 MB, DIO mode, 80 MHz |
-| PSRAM | present, quad SPI, clocked at 80 MHz together with the flash; size not known |
+| PSRAM | 4 MB, quad SPI, clocked at 80 MHz together with the flash |
 | External flash | 16 MB SPI NOR on its own SPI host, holds all runtime state |
 | Ethernet | ESP32 internal EMAC in RMII mode, TI DP83848 PHY at SMI address 1 |
 | RS-485 | UART1 with a driver-enable line, 9600 baud 8N1 |
@@ -40,7 +40,7 @@ flowchart LR
         twdt["Timer-group watchdog"]
     end
     iflash["Internal flash 16 MB"]
-    psram["PSRAM (quad, 80 MHz)"]
+    psram["Quad PSRAM 4 MB"]
     nor["External SPI NOR 16 MB"]
     phy["DP83848 PHY"]
     osc["50 MHz reference clock"]
@@ -236,7 +236,6 @@ not individually watched.
 
 ## Not yet known
 
-- The PSRAM size.
 - The part number of the external SPI NOR.
 - LED polarity (active-low is likely).
 - The location of the UART0, GPIO0 and EN pads on the PCB.
