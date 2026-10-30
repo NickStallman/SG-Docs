@@ -36,11 +36,12 @@ Modbus documentation.
 
 - The SH10RS firmware handles Modbus function code 0x20; which device sends it is unknown.
 - What does the multi-unit link configured at register 36110 do?
-- The rules the inverter applies when validating writes to holding registers 30000–36000 are not fully known.
-- Does writing the country register, even with its current value, make the inverter reload its default protection settings?
+- The controller's rules for validating writes to holding registers 30000–36000 are not fully known (the power stage's own fixed ranges are).
+- Which conditions raise inverter fault codes 210–211 and 303–304? The other first-level codes are listed in [error-codes.md](error-codes.md#inverter-fault-codes-sh10rs).
 - What units do input registers 5622 and 5623 (the export-limit range) use? They are not watts.
 - Does an immediate read-back after a write already return the new value?
 - Do the forced charge/discharge command and power registers read back as written when the inverter is not in forced mode?
+- Which installer settings enable the inverter's periodic automatic I-V scan?
 
 ## SG5.0RS
 

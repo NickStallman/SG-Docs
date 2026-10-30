@@ -18,7 +18,8 @@ Each inverter has two main processors:
   owns every external port, answers Modbus requests, runs the battery link, the meter link and
   demand response, and keeps the settings.
 - The **power-stage DSP** (digital signal processor; a TI TMS320F28374 on the SH10RS) runs the
-  power electronics: MPPT, the grid connection, battery charging and the protection trips. It
+  power electronics: MPPT, the grid connection, battery charging and the protection trips, in
+  two 18 kHz control interrupts plus a co-processor for the PV boost stages. It
   has no external port of its own. The controller polls it over an internal CAN bus (on the
   SH10RS each value is refreshed about every 0.6–0.8 s) and keeps the results in its own memory.
 
@@ -151,8 +152,9 @@ asserts one of nine commands:
 
 The controller reads the DRM lines itself on five analogue inputs, decodes the command, and
 passes the resulting state and limits to the DSP. The dongle has no part in it. It can only read
-the state (register 5503) and the reason for any power limit (5506, which reports 1024 for DRM1–4
-and 512 for DRM5–8).
+the state (register 5503) and the reason for any power limit (5506, which on the SH10RS reports
+512 for any DRM limit; the SG5.0RS power stage has no DRM reason of its own and shows a DRM limit
+as an ordinary active-power limitation, 2).
 
 The two inverters differ:
 

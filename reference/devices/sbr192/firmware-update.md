@@ -43,7 +43,7 @@ sequenceDiagram
 | Accept | the package names module `SBRBCU-S_22011.01.30`, module code **22**. The inverter accepts it only while its battery protocol is the Sungrow one |
 | Stage | the whole image is stored in the inverter's external flash before anything is sent on |
 | CRC | the inverter recomputes the image CRC and compares it with the declared value; a mismatch fails the job with error bit 0x200 |
-| Signature | the image ends with a 432-byte `SungrowSecureBoot` trailer: a CRC-32 over the trailer's version, length and signature fields, then an RSA-3072 PKCS#1 v1.5 signature over the SHA-256 of the image. The inverter checks the trailer CRC always, and the signature while its enforcement switch (36332) is on (power-on state not yet confirmed); a failed signature fails the job with error bit 0x4000 |
+| Signature | the image ends with a 432-byte `SungrowSecureBoot` trailer: a CRC-32 over the trailer's version, length and signature fields, then an RSA-3072 PKCS#1 v1.5 signature over the SHA-256 of the image. The inverter checks the trailer CRC always, and the signature while its enforcement switch (36332) is on (off after power-up on the SH10RS, on on the SG5.0RS); a failed signature fails the job with error bit 0x4000 |
 | Strip | the inverter shortens the image by the trailer and recomputes the CRC for the relay. **The BCU never sees the trailer** |
 | Relay | the inverter sets its battery CAN device to stream mode with transmit id **0x1F0**, stops its periodic battery frames, and blocks its 0x1E0 tunnel for the duration |
 

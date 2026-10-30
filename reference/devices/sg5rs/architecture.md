@@ -4,8 +4,8 @@ The SG5.0RS is built like the SH10RS: an STM32F417 controller (the "ARM") runs t
 Modbus register map, and passes power-stage work to a DSP. The general design is on
 [../sh10rs/architecture.md](../sh10rs/architecture.md). This page covers what the SG5.0RS controller (package P051,
 controller image `SUNSTONE-S_01011.01.50`) does differently: its ports, its register windows, an address gate with a
-relay mode, an encrypted serial link used by the phone app over Bluetooth, the link to the optimizer controller, its
-handling of DRM inputs, and the firmware images in its package.
+relay mode, its power stage, an encrypted serial link used by the phone app over Bluetooth, the link to the optimizer
+controller, its handling of DRM inputs, and the firmware images in its package.
 
 Register numbers are 1-based, as in Sungrow's Modbus documentation; the address in the frame is one less.
 
@@ -34,11 +34,11 @@ meter.
 
 | UART | Role | Line | Function codes served | Address rule |
 |---|---|---|---|---|
-| USART1 | Slave. Encrypted link for the phone app over a Bluetooth-to-serial bridge (section 7). Logic-level, no RS-485 driver; pins PA9 / PA10 | 115200 baud, set at boot | 3, 4, 6, 0x10, 0x65 | **Any** slave address is accepted and echoed |
+| USART1 | Slave. Encrypted link for the phone app over a Bluetooth-to-serial bridge (section 8). Logic-level, no RS-485 driver; pins PA9 / PA10 | 115200 baud, set at boot | 3, 4, 6, 0x10, 0x65 | **Any** slave address is accepted and echoed |
 | USART2 | Slave. Probably the dongle port. Downstream side of the relay (section 5) | from the saved serial settings, default 9600 8N1 | 3, 4, 6, 0x10, 0x60, 0x65 | Own address; broadcast writes executed but not answered |
 | USART3 | Slave. Second RS-485 port for an external master. Origin of the relay (section 5) | from the saved serial settings, default 9600 8N1 | 3, 4, 6, 0x10, 0x60, 0x65 | Own address |
 | USART4 | Master. The meter port: the inverter polls its own grid meter ([meters](../meters.md)) | 9600 8N1 | — | — |
-| USART6 | Slave and master. Link to the MLPE-CSU optimizer controller (section 8) | 115200 baud, set at boot | 4 (register reads); 3, 0x10, 0x17 taken as replies to the controller's own requests; 6 ignored | Own address |
+| USART6 | Slave and master. Link to the MLPE-CSU optimizer controller (section 9) | 115200 baud, set at boot | 4 (register reads); 3, 0x10, 0x17 taken as replies to the controller's own requests; 6 ignored | Own address |
 
 Differences from the SH10RS, whose second RS-485 port also carries a parallel (master-slave) link, an EV-charger
 master and an RS-485 battery master: the SG5.0RS has none of these. It also has no function `0x17` and no function
@@ -128,14 +128,32 @@ held for 2000 main-loop passes after the last forward, answered or not, which is
 therefore blocks the inverter's other ports for ten seconds or more. The SH10RS's "infinite hold" write at 37004 cannot
 be reached from an SG5.0RS forward window.
 
-## 7. Encrypted serial link on USART1 (phone app over Bluetooth)
+## 7. The power stage
+
+The SG5.0RS power stage is a single-phase string inverter: two PV boost inputs and an H-bridge,
+no battery or backup stage. Its DSP runs the control loops in a 16 kHz PWM interrupt (the SH10RS
+uses 18 kHz) and its slow logic on a 21.9 ms tick; time constants written as multiples of 20 ms
+therefore run about 9 % long. The power limit the controller pushes down (31205, in 0.1 %) lives
+in the DSP's RAM only, with 110 % meaning "no limit", so a power-stage restart clears it.
+
+Its protection is table-driven: every fault and event is a self-describing record with a readable
+name, and the inverter serves the names of the last four faults as text. The state codes it
+produces are 0x0000 (running), 0x1200, 0x1300, 0x1400, 0x1500, 0x1600, 0x5500, 0x8100, 0x8200,
+0x9100 and 0xA100 (waiting for PV power, enabled by a setting at 32501); rapid shutdown reports as
+0x1300. Demand response (DRM) is handled entirely by the controller; the power stage has no DRM
+registers. The DSP accepts requests for slave address 1 only, answers every refused write with
+exception 02, and the controller's per-step write to 31984 is refused every time, which the
+controller tolerates. There is no grid-waveform recording on this model, although the record
+store and the I-V scan exist.
+
+## 8. Encrypted serial link on USART1 (phone app over Bluetooth)
 
 USART1 is a point-to-point logic-level UART on PA9 / PA10. It runs a Modbus slave that only answers frames wrapped in
 AES-128-ECB. The peer is the iSolarCloud phone app over a Bluetooth-to-serial bridge; the dongle never uses this port.
 GPIO PA12 (input with pull-up) is the bridge's link-status line: the status LED blinks every 200 ms only while PA12 is
 high and USART1 has carried traffic within the last 6 s.
 
-### 7.1 Frame format
+### 8.1 Frame format
 
 All multi-byte fields are big-endian. Requests and replies use the same wrapper.
 
@@ -150,7 +168,7 @@ The clear text is an ordinary Modbus RTU frame with its CRC-16 (low byte first).
 a non-zero multiple of 16 and that all bytes have arrived; the inner CRC decides whether the frame is valid. A wrong key
 therefore yields a CRC failure and no reply. The wrapper has no session, nonce, sequence number or authentication.
 
-### 7.2 Plain requests
+### 8.2 Plain requests
 
 Exactly two unwrapped requests are accepted, with any slave address, and answered unwrapped:
 
@@ -164,7 +182,7 @@ The two are recognised by function and start register only; the register count i
 Every other plain frame is dropped. Registers 2792–2799 are also readable with function 4 on the other ports, so a
 generic dump of that range from the dongle's bus exposes the masked key.
 
-### 7.3 Key lifecycle
+### 8.3 Key lifecycle
 
 | Event | Effect |
 |---|---|
@@ -176,17 +194,17 @@ The key has little entropy and its masked form is readable in clear, so the wrap
 listener but gives no protection against anyone who can read register 2792. The app treats an all-`0x00` or all-`0xFF`
 key as "no encryption" and then sends plain frames, which this port ignores.
 
-### 7.4 What USART1 does differently
+### 8.4 What USART1 does differently
 
 | Behaviour | USART1 | Other slave ports |
 |---|---|---|
 | Slave address | Any value, echoed in the reply | Own address only |
 | Read of 4815 | Returns the inverter's own slave address | Not served |
 | Address gate and relay (section 5) | Exempt | Applied |
-| Communication-loss watchdog (section 10) | A write does not reload it | A write reloads it |
+| Communication-loss watchdog (section 11) | A write does not reload it | A write reloads it |
 | Log export (YMODEM) | An export started on USART1 runs as raw YMODEM without the wrapper; an export started on another port locks USART1 out until it ends | — |
 
-### 7.5 Limits and defects
+### 8.5 Limits and defects
 
 | Behaviour | Effect |
 |---|---|
@@ -199,12 +217,12 @@ key as "no encryption" and then sends plain frames, which this port ignores.
 This wrapper is not the encryption of firmware-update payloads, which uses a different key on the dongle port
 ([../../firmware-update/device-firmware-relay.md](../../firmware-update/device-firmware-relay.md)).
 
-## 8. Optimizer (MLPE) link on USART6
+## 9. Optimizer (MLPE) link on USART6
 
 USART6 (115200 baud) connects the controller to the **MLPE-CSU**, the controller of the optimizer network. Three kinds
 of traffic share it.
 
-### 8.1 Relay of the dongle's private function codes
+### 9.1 Relay of the dongle's private function codes
 
 A frame that arrives on USART2 with a valid CRC and a function code in `0x70`–`0x7E` or `0xF0`–`0xFE` is copied
 unchanged, slave address and CRC included, into a four-slot queue. A task empties the queue every 50 ms and writes one
@@ -217,7 +235,7 @@ On the SG5.0RS the dongle-port path ignores the relay's result, so every private
 parser. The parser rejects it and counts a bad frame; five in a row during an armed 115200-baud trial put the port
 back to its saved rate. Only the WiNet-S2 sends these codes ([optimizers and MLPE](../optimizers-and-mlpe.md)).
 
-### 8.2 Modbus traffic with the CSU
+### 9.2 Modbus traffic with the CSU
 
 USART6 is also a slave port: the CSU can read inverter registers through it with function 4. Function 3 and 0x10
 frames on this port are taken as replies to the controller's own firmware-transfer requests, and function 0x17 frames
@@ -225,14 +243,14 @@ as replies to its module poll.
 The controller is in turn a master towards the CSU: it relays MLPE firmware images to the CSU at address 1 and polls the
 module with its own function `0x17` requests (read start 14200–14349).
 
-### 8.3 Raw copy to the dongle port
+### 9.3 Raw copy to the dongle port
 
 Holding register **32600** switches on a raw copy: with value 170 every burst received on USART6, of any kind, is
 written unchanged to the dongle port (USART2), before any CRC or function-code check. 85 switches it off; any other
 value gets exception 04. The setting lives in RAM only and is 85 after every boot. No dongle writes it; it looks like a
 service tap.
 
-### 8.4 Dormant power-line-modem dialects
+### 9.4 Dormant power-line-modem dialects
 
 The controller also contains a driver for a power-line modem wired straight to USART6, using two frame dialects that
 start with the bytes `16 02` (seven-byte header, XOR checks) and `16 16` (CRC-16/XMODEM trailer), plus a text-command
@@ -242,14 +260,14 @@ sent. In the shipped design the modems sit behind the CSU on its SPI bus instead
 ([optimizers and MLPE](../optimizers-and-mlpe.md)). The SH10RS has none of this code. Holding register 32538 reads the
 PAN id from this dormant configuration.
 
-## 9. Meter port
+## 10. Meter port
 
 USART4 is the meter port, with the inverter as master. The SG5.0RS recognises fewer meter families than the SH10RS
 (no `0x20D5` or `0x150x` codes), applies the CT ratio to the currents, probes every 10 s, polls one family every 100 ms
 and the others every 200 ms, and reports the detected meter type at input register 7853. It has no Energy Bridge mode,
 no charger sharing and no meter-calibration session. Details are on the [meters page](../meters.md).
 
-## 10. Communication-loss watchdog
+## 11. Communication-loss watchdog
 
 Holding register 30447 ("Communication anomaly detection", 170 enable / 85 prohibited) arms a watchdog whose delay is
 holding register 30448 ("Communication anomaly trigger delay", 3–20 min). Any write from USART2, USART3 or USART6
@@ -257,7 +275,7 @@ reloads it; a write from USART1 does not. When it runs out the inverter logs an 
 further delay if configured. Both registers read 0xFFFF unless an internal identification condition holds, which is
 not known.
 
-## 11. DRM inputs
+## 12. DRM inputs
 
 The controller senses the AS/NZS 4777 demand-response lines itself, on five ADC3 channels (PF3, PF5, PC0–PC2). Each
 sample is scaled to a 3.3 V full scale and quantised to one of four levels; the level pattern decodes to DRM0–DRM8 the
@@ -273,13 +291,13 @@ group: level 1 for DRM1–DRM4, level 2 for DRM5–DRM8.
 | DRM5 / DRM6 / DRM7 / DRM8 | Generation limit 0 % / 50 % / 75 % / 100 % of rating |
 | No recognised command | Event cleared, state 255 |
 | State register | Input 5503, served directly: 1–9 = DRM0–DRM8; 255 = disabled, unsupported country, or enabled with no recognised command (the three cannot be told apart) |
-| Limit reason | Input 5506, copied from the DSP (512 = DRM5–DRM8) |
+| Limit reason | Input 5506, copied from the power stage. On this model the power stage has no DRM reason code of its own: it receives the DRM limit through the power-limit ratio (section 7) and reports an active-power limitation (2) for it, so a DRM5–DRM8 limit does not read as 512 unless the controller substitutes that value, which has not been confirmed |
 | Failed read or all-low inputs | Decodes as DRM0, so enabling DRM without a DRED connected probably stops the inverter |
 
 The SH10RS, by contrast, also limits consumption for DRM1–DRM3, sets a power factor for DRM3 and DRM7, reports 254 for
 "enabled, no command", and shows its state to the dongle only while a mode is asserted.
 
-## 12. Firmware images in package P051
+## 13. Firmware images in package P051
 
 The iSolarCloud package `SUNSTONE-S_B000.V001.P051` holds one image per processor. Each ends in Sungrow's secure-boot
 trailer, and the dongle hands each to the controller, which installs its own image and relays the others.
@@ -302,5 +320,6 @@ The relay path is on [../../firmware-update/device-firmware-relay.md](../../firm
 - Whether a read that crosses a window end answers 0xFFFF on every handler.
 - The upper bound of the DSP-forward hold time (the lower bound is 10 s).
 - The exact part behind USART1 and PA12 (a Bluetooth module is the evident peer).
-- What the power stage does with the DRM limit while the active-power-limit function is disabled; the controller only
-  substitutes the DRM limit into its power-stage frame while that function is enabled.
+- Whether the controller substitutes the DRM limit into its power-stage frame while the active-power-limit function
+  is disabled. The power stage itself ignores the enable switch (31204) and always applies the ratio it holds, so
+  the answer depends on the controller alone.

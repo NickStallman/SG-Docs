@@ -53,8 +53,9 @@ After the last packet the controller checks the staged image once per second of 
 | Signature | SHA-256 over the image before the trailer, verified as an RSA-3072 PKCS#1 v1.5 signature against the public key held in the controller | stage 3, error bit 0x4000, but only while enforcement is on |
 
 Enforcement is a switch at holding register **36332** (0xAA on, 0x55 off; other values get
-exception 04). It is not saved across a restart. Its power-on state on the SH10RS is not yet
-confirmed. Neither dongle writes it.
+exception 04). It is not saved across a restart. On the SH10RS it powers on **off**, so a missing or
+bad signature is accepted after every restart unless something turns it on; the SG5.0RS powers on
+with it on. Neither dongle writes it.
 
 The trailer is then cut off: every downstream module receives the image without it, and the
 controller recomputes the CRC over the shortened image for the relay. An image whose name matches
@@ -133,6 +134,17 @@ images go to node 1 like master DSP images; only the module string tells the mas
 image is for. After a DSP update the controller does not re-read the version block, so the
 version strings at 2582 keep showing the old versions until the next restart or a DSP link loss.
 
+Inside the power stage: the master DSP accepts its own image through the same update window,
+stores it in the inverter's serial flash, and when the inverter is not running writes a boot marker
+into its own flash and resets itself through the watchdog; a boot loader below the application
+(not part of any package) then programs the new image. During the wait it holds the inverter
+stopped with the normal stop command. A slave-DSP image is replayed by the master DSP, acting as
+the update master over its SPI link to the slave, with the same request sequence the controller
+uses on the CAN side; the master DSP reports the stage of that relay back through the update
+window. The master DSP image also contains an AES implementation, but nothing calls it; the
+images are not decrypted in the DSP. The master DSP has no path to a CPLD, so a code-08 image
+could not be applied even if the controller accepted it.
+
 ## Battery control unit
 
 | Item | Behaviour |
@@ -169,8 +181,5 @@ result of whichever finishes last.
 
 ## Not yet known
 
-- The power-on state of the signature-enforcement switch (36332) on the SH10RS.
-- How the DSP and the AFCI board activate a new image, and how the master DSP passes slave-DSP
-  images on.
-- How a CPLD image would reach the SH10RS, given that the controller refuses code 08.
+- How the AFCI board activates a new image.
 - The register layout and timing of the 'J' relay and of the LG pack update.

@@ -68,6 +68,8 @@
 
 **CAN2**: the BCU's 29-bit service and stack-to-stack bus.
 
+**CLA**: control law accelerator, the co-processor inside the power-stage DSP that runs the PV boost regulators.
+
 **capability bitmap**: 60-register block at 5520 in which a protocol-2/3 inverter reports which optional registers it has.
 
 **capability block**: 60 input registers at 5520 in which the inverter announces its optional feature groups.
@@ -326,7 +328,7 @@
 
 **mDNS**: multicast DNS, the LAN service-discovery protocol used over UDP 5353.
 
-**MDSP / SDSP**: master and slave DSP of the power stage.
+**MDSP / SDSP**: master and slave DSP of the power stage, linked by an SPI bus; the master also hosts a control co-processor (CLA) that runs the PV boost loops.
 
 **meter port**: the inverter's own RS-485 port on which it polls the grid meter as Modbus master.
 

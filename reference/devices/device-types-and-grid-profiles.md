@@ -201,5 +201,3 @@ inverter side on [sh10rs/grid-codes-and-drm.md](sh10rs/grid-codes-and-drm.md).
   logs, 1 "residential new PV").
 - Whether a device-code change during operation re-runs the classification.
 - Which of 30500, 30643 and 30646 a type 35 device with protocol 1 or 4 actually implements.
-- Whether writing the country register makes the inverter reload default protection values (the profile order writes
-  the country first, so a reload would be overwritten by the following runs).

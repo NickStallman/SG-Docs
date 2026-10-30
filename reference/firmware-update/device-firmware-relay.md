@@ -167,7 +167,8 @@ After the last packet, the **inverter's own ARM controller** verifies this trail
 public key embedded in its application. A bad or missing signature is fatal only while an
 enforcement flag is set — a byte set by a holding-register write to 1-based 36332 (which
 accepts only "enable" or "disable"). When enforcement is off, an unsigned image is accepted.
-Its power-on state on the inverter is not yet confirmed.
+The switch is not saved across a restart: the SH10RS powers on with it off, the SG5.0RS with it
+on.
 
 ## Where the image goes, and the relay
 
@@ -184,7 +185,11 @@ What happens next depends on the module:
   image into internal flash on the next boot.
 - **DSP and AFCI images** (module codes 03 and 06) are relayed by the inverter, acting as a
   second IAP master, over **CAN** to the DSP (slave address 1) and AFCI (slave address 6),
-  using the same register protocol and the same login token.
+  using the same register protocol and the same login token. The DSP stages its own image in
+  the inverter's serial flash and, once the inverter is stopped, writes a boot marker and resets
+  into its boot loader to program it; a slave-DSP image (module code 04) is relayed once more by
+  the master DSP over its SPI link, with the same request sequence. The AES code present in the
+  SH10RS DSP image is never used; the DSP receives the images as the inverter sends them.
 - **Optimizer (MLPE) images** (module codes 32, 38, 39, 40) are relayed over the inverter's
   **serial link** at 115200 baud to the MLPE head module (not to individual optimizers).
 - **The battery control unit image** (module code 22, SBR protocol) is relayed over **CAN

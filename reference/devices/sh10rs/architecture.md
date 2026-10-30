@@ -36,7 +36,7 @@ flowchart LR
   bcu ---|"battery CAN 250 kbit/s"| arm
   arm ---|"internal CAN 500 kbit/s"| dsp
   arm ---|"internal CAN 500 kbit/s"| afci
-  dsp -.- sdsp
+  dsp ---|"SPI"| sdsp
   dsp -.- cpld
   arm --- fram
   arm --- nor
@@ -44,7 +44,8 @@ flowchart LR
   arm --- wdt
 ```
 
-The dotted links inside the power stage are not visible from outside the DSP; see
+The master DSP reaches the slave DSP over an SPI link; the dotted link to the CPLD is nominal
+only, because the master DSP's firmware never addresses one; see
 [the power stage](#the-power-stage-dsp-node-1).
 
 ## Communication controller
@@ -76,7 +77,7 @@ The controller's first CAN controller connects it to the power stage and the AFC
 | Nodes | Controller (the only master), power-stage DSP at address 1, AFCI board at address 6 |
 | Receive filter | None; every frame is accepted and its data bytes appended to a 512-byte ring |
 | Function codes | 3, 4, 6, 16 and 0x17 (read and write in one frame) |
-| Exceptions | The controller accepts DSP exception replies (0x86, 0x90, 0x97) on the wire but never acts on them |
+| Exceptions | The controller accepts DSP exception replies (0x86, 0x90, 0x97) on the wire but never acts on them. The DSP only ever sends exception 02 (illegal data address), for a start address or range outside one of its register windows; a parameter value outside the range the DSP allows is dropped silently and the write is still acknowledged, so a bad value never stalls the poll |
 
 The same bus carries three kinds of traffic: the controller's own cyclic poll (below), requests
 the controller forwards on behalf of a Modbus master ([register-windows.md](register-windows.md)),
@@ -86,7 +87,25 @@ and firmware relays ([firmware-update.md](firmware-update.md)).
 
 The power stage is run by a TI TMS320F2837x-class DSP (the image is built for the TMS320F28374).
 It measures everything electrical (PV strings, grid, battery port, temperatures, energy counters)
-and acts on the commands the controller sends it.
+and acts on the commands the controller sends it. It samples at 18 kHz and runs its slow logic on a
+19.4 ms tick; the AC values it serves are means over 8 ticks (about 155 ms), the PV and battery
+current values are means over 250 ticks (about 4.9 s), and PV voltages read 0 below 60 V while no
+PV power flows.
+
+How it runs the power electronics:
+
+| Stage | Design |
+|---|---|
+| Grid inverter | Transformerless H-bridge with a freewheeling branch, switching at 18 kHz with a 2 µs dead band. Grid-tied, a bus-voltage regulator sets the active current, a reactive-power regulator the reactive current, and the current is shaped by a proportional-resonant controller with 3rd- and 5th-harmonic compensation and grid-voltage feed-forward. The grid angle comes from a single-phase phase-locked loop; the current reference carries a small frequency-dependent phase shift as active anti-islanding, and a passive detector watches the loop's quadrature error |
+| Backup / off-grid output | The same bridge regulates an internally generated sine (outer voltage loop with 3rd-harmonic compensation, inner current loop). Before the grid relay re-closes, the internal angle is re-aligned to the grid |
+| PV inputs | Four boost converters at 24 kHz, run by the DSP's control co-processor, each with a cascaded voltage-then-current regulator (current reference limited to 18 A), a single-loop mode below 1 A, over-current, over-power and minimum-voltage limiters, and a shared DC-bus over-shoot limiter; paralleled inputs are regulated as one. The main core computes the maximum-power-point references: a voltage-reference perturb-and-observe per input every 9.7 s, started at 80 % of open-circuit voltage, tracking between 40 V and 495 V, with periodic rescans. Inputs can be treated independently or as paralleled pairs |
+| Battery port | Two-phase interleaved bidirectional DC/DC at 24 kHz. Depending on the situation it regulates the DC bus (off-grid, or while the inverter regulates power), the charge current, or the discharge current, inside the battery management system's current limits and the EMS power set-point, which is ramped |
+| Fast protection | Bus over-voltage at 600 V, bus-capacitor unbalance, PLL-based islanding detection, apparent-power cap of 14.4 kVA / 63.5 A, low- and high-voltage ride-through with per-depth time tables, and the hardware trip input of the PWM |
+
+The reactive-power mode setting (31605) selects, inside the power stage, between off, fixed power
+factor, fixed reactive power, Q(P) and Q(U); the controller only passes the value down. While a
+demand-response state is asserted the power stage overrides it with a fixed power factor at the
+set-point the controller pushes with the DRM state ([grid-codes-and-drm.md](grid-codes-and-drm.md#what-each-mode-does-on-the-sh10rs)).
 
 The design also has a slave DSP ("SDSP") and a CPLD. The controller never addresses them: the
 master DSP at address 1 stands in for all three. Firmware for each is selected only by the
@@ -94,8 +113,12 @@ module string in the update descriptor (module code 3 master DSP, 4 slave DSP, 8
 DSP reports the version of each part in a block of four 15-register version slots, which the
 controller reads at start-up and serves to the dongle among the version strings at 2582
 (120 registers, one 30-character string per slot). On the SH10RS the CPLD slot is not read and
-stays empty. How the master DSP reaches the slave DSP and the CPLD is not visible from outside;
-SPI is the likely carrier.
+stays empty. The master DSP talks to the slave DSP over a dedicated SPI link with a small cyclic
+frame (one byte every other 19.4 ms tick, so a frame takes about a second): it sends its state,
+control mode and a command byte, and receives status flags, the slave's version digits and an
+identifier. The slave DSP's version string is assembled from that reply, which is why it reads a
+default `01.01` for the first second after power-up. Nothing in the master DSP's firmware addresses
+a CPLD; its version slot is a fixed, unused string.
 
 ### Cyclic poll of the DSP
 
@@ -136,7 +159,7 @@ about 50 ms; a late reply is dropped and that step is sent again 100 ms later.
 | Refresh | Values that come from the DSP change at most once per rotation, every 0.6 to 0.8 s. Polling faster returns the same numbers |
 | Rolling means | Four power values are replaced by a 60-sample mean, one sample per rotation, before they are served: active power, grid power from the meter, DC power and battery power. This applies in EMS modes 0 (self-consumption) and 8; it is skipped in forced, external-EMS and VPP modes |
 | Lag | The averaged registers (active power 5031 and 13034, export power 13010, load power 13008, DC power 5017, battery power 13022 and 5214) follow a step by about 5 % at once, 50 % after 16 to 22 s and 100 % after 34 to 46 s: roughly a 40 s mean |
-| Not averaged | MPPT voltages and currents (5011–5016), battery voltage and current (5630, 5631), grid voltage, current and frequency, the meter registers (5601 onwards) and energy counters. For responsive grid power use the meter block |
+| Not averaged by the controller | MPPT voltages and currents (5011–5016), battery voltage and current (5630, 5631), grid voltage, current and frequency, the meter registers (5601 onwards) and energy counters. The power stage itself averages the MPPT values and the battery current over about 4.9 s and the AC values over about 155 ms. For responsive grid power use the meter block |
 | Pauses | The whole cycle stops, and values freeze without any error, while a request is being forwarded to the DSP, during an I-V curve scan, a battery record export, an LG battery update or a firmware relay |
 | Loss | If a request stays unanswered for about 180 s, the controller zeroes the published measurements, reports state Standby (0x1400) and re-downloads every DSP parameter block in a 31-step resynchronisation. The DSP can request the same resynchronisation itself, for example after it restarted |
 | Run/stop | Start and Stop (13000) become a run command the controller writes to the DSP (0xCF start, 0xCE stop). Several sources can hold a stop request at once; firmware updates are one of them |
@@ -148,8 +171,11 @@ controller visits it with one of: a read of its status block (every fourth visit
 settings block, or a write of the clock. After a resynchronisation it first reads the board's
 identity (a 30-character version string) and its full parameter block, then writes the
 parameters back. The values read are served unchanged in the AFCI window 9800–9850; the AFCI
-version string appears among the version slots at 2582. A flag in the DSP's status words
-(probably the arc-fault flag) makes the controller stop the inverter and report a fault.
+version string appears among the version slots at 2582. The board also drives one digital line
+into the power stage; the power stage polls it in its control interrupt (only once the controller
+has enabled arc detection, 30343 = 170), confirms an arc by perturbing each PV input through its
+MPPT set-point, and then sets the arc-fault bit (code 88) in its status words, on which the
+controller stops the inverter and reports the fault. The bit is acknowledged through 30349 = 170.
 
 ## External ports
 
@@ -245,7 +271,5 @@ The board has no display and no keypad.
 ## Not yet known
 
 - Which physical terminal each UART reaches.
-- The link between the master DSP, the slave DSP and the CPLD.
-- The exact DSP reply latency and the meaning of most of the settings the controller pushes to
-  the DSP.
+- Whether a CPLD is fitted at all, since the master DSP firmware has no path to one.
 - Part numbers of the watchdog supervisor and the exact FRAM and flash parts.

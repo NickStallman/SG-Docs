@@ -89,6 +89,16 @@ which tells the dongle that the grid-standard register 30036 exists). A function
 | 32600 | holding u16 | Raw copy of USART6 traffic to the dongle port | 170 on, 85 off; not kept across a reboot |
 | 30447 / 30448 | holding u16 | Communication anomaly detection / trigger delay | 170 / 85; 3–20 min |
 
+**What the power stage produces.** The running state (5038) is built by the power stage from the
+codes 0x0000 (running), 0x1200 (initial standby), 0x1300 (stopped by command; also reported during
+a rapid shutdown), 0x1400 (standby), 0x1500 (emergency stop), 0x1600 (starting), 0x5500 (fault),
+0x8100 (derating), 0x8200 (running at the dispatched power limit), 0x9100 (running with an alarm)
+and 0xA100 (waiting for PV power). The active-power limit the
+controller pushes down is kept by the power stage in 0.1 % steps in RAM only, with 110 % meaning
+"no limit", so 5007 / 5008 revert after a power-stage restart. The power stage names every fault
+and event internally and serves the names of the last four faults as text; the numeric codes are
+listed in [error codes](../../appendix/error-codes.md#inverter-fault-codes-sg50rs).
+
 **The PV variant.** The AS/NZS 4777.2:2020 options of the `unit` settings template come in two variants, chosen by
 input register 5479: values 1 and 2 select the PV variant (39 register runs, 111 registers), values 3 to 6 the
 energy-storage variant (41 runs, 121 registers). The SG5.0RS reads 1, so a grid-profile write sends the PV variant: the
@@ -99,10 +109,10 @@ country to 32310, the standard to 30036, then the variant's register runs in tem
 
 | Register | Meaning |
 |---|---|
-| 2792–2799 | The masked session key of the encrypted Bluetooth link; readable in clear with function 4 on every port ([architecture](architecture.md#7-encrypted-serial-link-on-usart1-phone-app-over-bluetooth)) |
+| 2792–2799 | The masked session key of the encrypted Bluetooth link; readable in clear with function 4 on every port ([architecture](architecture.md#8-encrypted-serial-link-on-usart1-phone-app-over-bluetooth)) |
 | 4815 | The inverter's own slave address; served on USART1 only |
 | 4990–5000 | Serial number and device type, the one block (besides 2792) readable in clear on USART1 |
-| 5506 | Power-limit reason, copied from the DSP; 512 = DRM5–DRM8 |
+| 5506 | Power-limit reason, copied from the power stage. This model's power stage emits 0 (none), 1 (over-temperature or volt-watt derating), 2 (active-power limitation; also how a DRM limit applied through the power-limit ratio appears), 8 (over-frequency), 32 (soft start), 256 (volt-watt), 2048 (under-frequency) and 36864 (generation limit); it never emits 4 or 512 itself |
 | 5519 | AFCI (arc-fault) trip count |
 | 32538 (holding) | PAN id of the dormant power-line-modem configuration |
 

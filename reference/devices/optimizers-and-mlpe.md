@@ -110,7 +110,7 @@ On both inverters the controller passes any frame with a valid CRC and a functio
 `0xF0`–`0xFE` that arrives on the **dongle port** to its internal USART6 (115200 baud), whatever its slave address,
 through a four-slot queue served every 50 ms; replies come back the same way. The relay is suspended during a
 firmware-update session, and the inverter never reports a relay failure. The SG5.0RS details (including a raw USART6
-copy switched by holding register 32600) are in [sg5rs/architecture.md](sg5rs/architecture.md#8-optimizer-mlpe-link-on-usart6).
+copy switched by holding register 32600) are in [sg5rs/architecture.md](sg5rs/architecture.md#9-optimizer-mlpe-link-on-usart6).
 The inverter also polls the module itself with function `0x17` (read start 14200–14349) and relays MLPE firmware
 images to it.
 

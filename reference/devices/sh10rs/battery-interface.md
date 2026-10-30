@@ -88,7 +88,7 @@ remaining ticks only if an hour has passed since the last one.
 | 0x100 | 0–1 | battery voltage measured by the inverter (as 5630) |
 | | 2–3 | battery current measured by the inverter, signed (as 5631) |
 | | 4–5 | inverter internal temperature (as 5008) |
-| | 6 | inverter mode 0–3, derived from the DSP's status bits |
+| | 6 | inverter mode 0–3, derived from the power stage's battery-link state bits (set from the battery-voltage window, the BMS flags and the running state) |
 | 0x101 | 0–3 | local time, seconds (u32) |
 | 0x102 | 0–7 | handshake flags; byte 7 = 1 selects the BCU's data mode |
 | 0x103 | 0–7 | inverter serial number, two frames (byte 0 = 0/1, then 7 characters) |
@@ -99,7 +99,7 @@ remaining ticks only if an hour has passed since the last one.
 | | 4–5 | maintenance target SOC (33062) |
 | | 6 | bit 0 and bit 1: maintenance requests (33060, 33061); bits 2–7: hold time in hours (33063) |
 | 0x108 | 0 | bit 1: one installer flag; the BCU stores it but does not act on it |
-| 0x109 | 0 | a DSP status value; 0x55 selects the BCUs' shut-down handling (probably a coordinated shut-down of all stacks); bytes 1–4 a 32-bit inverter value |
+| 0x109 | 0 | the power stage's operating flag: 0xAA while grid-tied, 0x55 while the inverter runs islanded (off-grid or backup supply); 0x55 selects the BCUs' off-grid handling; bytes 1–4 a 32-bit inverter value |
 
 While a tunnel or firmware relay holds the bus in stream mode these frames are not sent.
 
@@ -279,7 +279,5 @@ The inverter's cyclic DSP poll pauses while an export runs. The 0x1D0 tunnel car
 
 ## Not yet known
 
-- The meaning of the DSP status bits that choose the mode byte of 0x100, and when the DSP sets
-  the 0x55 value sent in 0x109.
 - The model of the LG packs on RS-485 and the format of their update.
 - The meaning of the BCU fields behind 10690, 10693, 10699, 10701 and 10705.

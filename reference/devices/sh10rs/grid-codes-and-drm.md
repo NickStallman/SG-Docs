@@ -80,8 +80,9 @@ sequenceDiagram
 - 32-bit settings are written low word first.
 - Words stored as all-ones are skipped.
 - The country and grid-standard registers always come first.
-- Whether writing the country register on its own reloads the inverter's default protection
-  values is not confirmed.
+- Writing the country register on its own does not reload the protection values: the power stage
+  only recomputes its rating-dependent constants from the new code, and the controller re-pushes
+  the stored settings unchanged.
 
 ### Parameter groups a 2020 profile sets
 
@@ -103,13 +104,15 @@ Values shown are those of AS/NZS 4777.2:2020 Australia A, as read on a hybrid si
 | Charge-side under-voltage response (probably ES variant only) | 33006–33015 | on, 215 / 207 / 207 / 207 V → 0 / 80 / 80 / 80 %, 1.0 s |
 | Low / high voltage ride-through | 30798–30815, 30997–31012 | LVRT zero-power mode on, 180.0 V / 70.0 V, 10 000 / 1000 ms; HVRT zero-power mode on, 260.0 V, 1000 ms |
 | Reconnection conditions | 32535–32552 | grid check on, 47.50–50.15 Hz, 89.1–110.0 %, 60 s, rising gradient 16 %/min |
-| Anti-islanding | 30360 | active islanding detection on |
+| Anti-islanding | 30360 | active islanding detection on (adds a frequency-dependent phase shift to the current reference; the passive detector on the phase-locked loop is always on) |
 
 Recovery thresholds sit inside the level-1 trip thresholds, and level-2 thresholds sit outside
 level 1. The dongle's web UI refuses a value that breaks that order. Examples: OV recovery (32318)
 must be above UV recovery (32319) and below the level-1 OV trip (32323). The level-2 OV trip
 (32327) must be at or above the level-1 OV trip. The inverter runs its own checker on
-30000–36000, whose rules are not documented.
+30000–36000 (the controller's ranges). The power stage then applies a second, fixed acceptance
+range per register and silently drops values outside it, and it clamps grid-frequency thresholds
+to the rated frequency ±5 Hz and grid-voltage thresholds to a rating-dependent window.
 
 ## Installer settings catalogue
 
@@ -221,11 +224,12 @@ poll rotation (every 0.6 to 0.8 s):
 | disabled (255) | 100 % | 100 % | 1.000 | |
 
 DRM4, DRM8 and "no command" leave the power factor alone. After DRM3 or DRM7 the ±0.800 value
-therefore stays in place until a DRM1, 2, 5 or 6 command arrives or DRM is disabled. The DSP
-applies the limits and reports the result in input 5506:
-
-- 1024 = limited by DRM1–DRM4;
-- 512 = limited by DRM5–DRM8.
+therefore stays in place until a DRM1, 2, 5 or 6 command arrives or DRM is disabled. While any
+DRM state (1–9) is asserted, the power stage runs in fixed-power-factor mode at the pushed value,
+whatever reactive-power mode the installer set; with no state asserted the installer's mode applies
+again. The power stage applies the generation limit and reports any demand-response limit in
+input 5506 as **512**, for DRM1–DRM4 as well as DRM5–DRM8 (the code 1024 is never produced);
+DRM1–DRM4 additionally make it charge the battery at rated power.
 
 ### What the dongle sees
 
@@ -263,8 +267,5 @@ Power-limit reason 257 ("ripple control") is therefore not expected on the SH10R
 
 ## Not yet known
 
-- Whether writing the country register reloads the inverter's protection defaults.
 - The pin-to-RJ45 mapping of the five DRM inputs and the voltage an unplugged DRED presents.
-- What the DSP does with the power-factor setpoint outside DRM3/DRM7.
-- What power-limit reason 2049 (an SH10RS-only code, raised with alarm 997) means exactly.
 - Which countries codes 100–105 are (probably Australian or New Zealand sub-variants).

@@ -78,6 +78,17 @@ standby, 0x0020 starting, 0x0040 running, 0x0080 derating, 0x0100 fault, 0x0200 
 0x0400 maintain mode, 0x0800 forced mode, 0x1000 off-grid, 0x4000 external EMS. The dongle's
 Modbus-TCP view of an SH10RS carries the 5221 code (0x8200) at 13000, not this bit coding.
 
+The inverter's power stage produces only 0x0000, 0x0400, 0x0800, 0x1000, 0x1200, 0x1300, 0x1400,
+0x1500, 0x1600, 0x1800, 0x1900, 0x2000, 0x4000, 0x4001, 0x5500, 0x8100, 0x8200 and 0x9100; its
+controller adds 0x2500 and reports 0x1400 while the power stage does not answer. Meanings worth
+knowing: 0x1300 is the state after a stop command (the inverter waits for a start); 0x1800 is the
+PV string-detection sweep; 0x1900 means rapid shutdown is engaged (31034); 0x8200 is a run in which
+the active-power limit (33183 or the power-limit command) is the binding derating source, while any
+other derating source gives 0x8100; 0x9100 means an alarm bit is set that carries no fault code.
+At night the power stage returns to 0x1400 by itself after a low-power timer, and a stop command
+is executed as a limit to 1 % and a ramp-down to 6.25 % of rated power before the relays open
+([control-and-ems.md](control-and-ems.md#operating-states)).
+
 **Power-flow flags** (6099 / public 13001):
 
 | Bit | Meaning |
@@ -110,8 +121,10 @@ Modbus-TCP view of an SH10RS carries the 5221 code (0x8200) at 13000, not this b
 
 The SH10RS substitutes **2049 (0x801)**, which is not in Sungrow's list, while a DSP flag is set
 and the switch at holding 31214 (in the feed-in-limitation settings) is 0xAA. In the same
-condition it raises alarm 997. It is probably a feed-in-limitation fail-safe. Whether
-simultaneous reasons are combined bitwise is not confirmed.
+condition it raises alarm 997. The flag itself means that a frequency-derating limit (over- or
+under-frequency) is active on the power stage. Simultaneous reasons are not combined: the power stage
+reports the single most restrictive source, and this firmware produces only the values 0, 1, 2, 4, 8,
+32, 256, 512 and 2048 (any demand-response limit reads 512).
 
 ## Faults and alarms
 
@@ -126,9 +139,11 @@ The active fault list at 5448–5472 (25 registers) is a structure of words, not
 | 5453 + 2i | code of entry i (i = 0–9) |
 | 5454 + 2i | class of entry i: 25 = fault, 24 = alarm, 0 = other |
 
-The codes are Sungrow's numeric fault codes (for example 732 = a battery protection, 997 = the
-alarm mentioned above). Their meanings are in
-[`../../appendix/error-codes.md`](../../appendix/error-codes.md). The same layout is served on each
+The codes are Sungrow's numeric fault codes. Each one is a bit of a power-stage status word plus
+a per-word offset (the word behind 13052–13053 gives codes 2–17 and 100–115, for example 12 =
+excess leakage current, 14 = 10-minute overvoltage); 997 is the "frequency derating active" alarm
+and 732 a battery protection. The table of codes and the conditions that raise them is in
+[`../../appendix/error-codes.md`](../../appendix/error-codes.md#inverter-fault-codes-sh10rs). The same layout is served on each
 battery slave (200–204) for that stack's own faults, see
 [battery-interface.md](battery-interface.md).
 

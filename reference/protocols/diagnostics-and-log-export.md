@@ -99,7 +99,10 @@ exceeds 2560 bytes it is split into `packgeCount` parts, and each part's `busine
 
 ## I-V curve scan (10306 / 10326)
 
-The dongle makes an inverter sweep its PV inputs and fetches the recorded curve. Only the cloud
+The dongle makes an inverter sweep its PV inputs and fetches the recorded curve. The inverter
+sweeps one input at a time (the input's voltage reference is stepped from the operating point down
+to 50 V, about 25 s per input, while the other inputs keep tracking) and stores 128 points per
+input. Only the cloud
 can start it; the local web UI shows the port as "used for IV scanning" but has no I-V page. The two
 cmdTypes are handled identically. A request with a `data` object is an optimizer (component) scan,
 WiNet-S2 only; without it, a string scan. The command is accepted only when no scan is running and
@@ -125,9 +128,11 @@ code (32005–32009). The dongle tests bit 15 (success), then bit 16 (scanning),
 Inside the inverter the ARM controller does not measure anything itself: it commands the
 power-stage DSP to sweep, polls it every 50 ms and copies the curve from the DSP into its flash.
 While the scan runs, values the ARM normally refreshes from the DSP stop updating. The inverter
-fails the scan with fault code 21 when it is still active after 60 s, and with the DSP's code (26
-when the DSP gives none) when the DSP reports failure. It refuses a start (exception 4) while a scan
-runs and after 1000 starts since power-up.
+fails the scan with fault code 21 when a scan step stays active past the controller's 60 s limit
+(how that limit relates to the roughly 25 s the power stage spends on each input of a four-input
+unit is not known), and with the DSP's code (26 when the DSP gives none) when the DSP reports
+failure. It refuses a start (exception 4) while a scan runs and after 1000 starts since power-up;
+the start counter is the controller's, the power stage keeps none.
 
 Per-device codes reported to the cloud: the inverter's fault code, 25 (optimizer scan failed), 31
 (no answer for more than n × 50 s, or polling for more than 180 s), 32 (10 Modbus errors in a row),
@@ -147,7 +152,8 @@ The dongle stores the file as `<YYYYMMDDhhmmss>_<SN>_VI_ALL.txt` whatever the in
 (`VI_ALL.txt <YYMMDDhhmmss>` on the SH10RS, `VI_ALL_<YYMMDDhhmmss>.txt` on the SG5.0RS). Despite
 the name the content is binary: 258-byte records (256 data bytes, 0x80, and a flag that is 1 on the
 last record of each group), three records per group, one group per PV input, so 3 × 128 16-bit
-values per input. Which physical quantity each of the three series holds is not yet known. The
+values per input: the first series is the input voltage in 1 V steps, the second the input current
+in 0.01 A steps, and the third repeats the current series. The
 inverter also has `VI_DSP.txt` (0xA1) and `VI_PVD.txt` (0xA2); the dongle requests only 0xA0.
 
 ### Results to the cloud
@@ -257,6 +263,14 @@ binary records, with a 6-byte prefix (remaining record count, low word first, an
 length) every 1000 records. A `.txt` file can therefore hold binary data. Recording files start
 with a 6-byte prefix (record count and record length). The dongle adds an 11-byte header (`ver`, a
 4-byte fault-record code and a 4-byte version) to recording files before storing them.
+
+On the SH10RS the DSP fault waves and the grid recording are the same thing: one recorder, 30
+channels of 320 samples each, stored as 19 956-byte records in a 10-slot store in the power stage's
+serial flash. A fault wave is such a record taken automatically at the highest rate when a
+protection trips or the grid is lost; a grid recording is one taken on request at the chosen
+decimation. Each record starts with an 18-word header: the slot number, the DSP's clock, the
+inverter's status words at the moment of the trigger, and the channel count. The SG5.0RS has the
+record store and the I-V scan but no grid-recording trigger.
 
 ### Battery records through the inverter
 
@@ -381,7 +395,6 @@ about 100 ms.
 
 ## Not yet known
 
-- Which physical quantities the three I-V series hold, and their scaling.
 - What the cloud means by 10306 versus 10326.
 - How much inverter output drops during an I-V sweep.
 - Whether 0x0801 is the FCAS trigger on all Australian inverters, and whether the cloud sends 10369

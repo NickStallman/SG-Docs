@@ -75,6 +75,22 @@ images over the battery CAN bus. While the DSP image is relayed, the inverter st
 power, so a DSP update on a sunny day costs generation. See
 [device firmware relay](../reference/firmware-update/device-firmware-relay.md).
 
+### A stop command ramps down before the relay opens
+
+On the SH10RS a stop (13000 = 0xCE) is not immediate: the power stage first limits active power
+to 1 %, waits until the output has fallen below 6.25 % of rating or a ramp timer runs out, and
+only then opens the grid relay and reports 0x1300. A controller watching 5038 / 13000 should
+expect several seconds between the write and the state change. See
+[control-and-ems.md](../reference/devices/sh10rs/control-and-ems.md).
+
+### The SG5.0RS power limit lives in the power stage's RAM
+
+The active-power limit the controller pushes to the SG5.0RS power stage is held in RAM only,
+and the "retain after power-off" and enable switches are ignored there. After a power-stage
+reset the limit is 110 % (no limit) until the controller pushes it again, which is why 5007 /
+5008 can read back as unlimited after a restart. See
+[sg5rs/registers.md](../reference/devices/sg5rs/registers.md).
+
 ## Dongle
 
 ### The WiNet-S2 refuses unsigned packages above a version floor (error 4104)

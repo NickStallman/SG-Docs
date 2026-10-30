@@ -161,8 +161,9 @@ and no interface can switch it on. It is inert.
   [SGU container](../reference/firmware-update/sgu-container.md).
 - **Inverter and battery updates** relayed by the dongle are checked by the dongle only for a
   checksum, not a signature. The inverter verifies its own signature block (RSA-3072) on each image
-  before it applies it, while its signature enforcement is switched on (the power-on state of that
-  switch is not yet confirmed). See
+  before it applies it, but only while its signature enforcement is switched on. On the SH10RS the
+  switch powers on off, so after a restart an unsigned image is accepted unless something turns it
+  on; on the SG5.0RS it powers on on. See
   [Device firmware relay](../reference/firmware-update/device-firmware-relay.md).
 - **Physical access.** Neither dongle has Secure Boot or flash encryption enabled. Anyone with the
   dongle in hand can read both flash chips, including the identity file, and load other firmware

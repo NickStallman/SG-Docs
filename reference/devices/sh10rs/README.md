@@ -26,7 +26,7 @@ most of this register model see [`../sg5rs/`](../sg5rs/).
 | Battery | high-voltage Li-ion (SBR stacks on CAN at 250 kbit/s; the inverter has five stack slots, the battery firmware addresses at most four); battery type 105 at input 5629 |
 | Grid meter | inverter-attached; its readings appear as inverter registers (5601–5607, 5737–5746), not as a separate meter device |
 | Main controller | STM32F417ZG (ARM firmware `SUNSTONE-H_01011.xx.yy`) |
-| Other processors | master power-stage DSP (`SUNSTONE-H_03021.xx.yy`), slave DSP (`SUNSTONE-H_04011.xx.yy`), arc-fault detector (`AFCI_06002.xx.yy`) |
+| Other processors | master power-stage DSP (`SUNSTONE-H_03021.xx.yy`), slave DSP (`SUNSTONE-H_04011.xx.yy`, linked to the master by SPI), arc-fault detector (`AFCI_06002.xx.yy`); the CPLD listed in update descriptors is not reachable from the master DSP firmware |
 | Dongle-facing link | RS-485, 9600 baud 8N1, Modbus RTU, inverter at slave address 1 |
 
 ## Identity

@@ -100,9 +100,9 @@ The dongles never send function 0x17.
 
 | Window | Functions | Notes |
 |---|---|---|
-| 16000–17500 | 3, 4, 6, 16 | |
-| 29500–29899 | 3, 4, 6, 16 | Fn 0x17 starting at 29500–29550 is answered locally (above) |
-| 36702–38999 | 3, 4, 6, 16 | The forward test covers 36450–38999, but 36450–36701 is claimed first by the local 36000–36701 window. No DSP register is known to answer in this window |
+| 16000–17500 | 3, 4, 6, 16 | The power stage's record store: time stamps of the ten stored recordings, status, chunk fetch |
+| 29500–29899 | 3, 4, 6, 16 | The power stage's firmware-update entry, production-test controls and slave-DSP words. Fn 0x17 starting at 29500–29550 is answered locally (above) |
+| 36702–38999 | 3, 4, 6, 16 | The forward test covers 36450–38999, but 36450–36701 is claimed first by the local 36000–36701 window. The DSP serves nothing here: it answers a read with a Modbus exception (illegal data address), which the controller drops, so the dongle gets no reply |
 
 The controller rewrites the slave byte to 1, sends the request to the DSP over the internal CAN
 bus and relays the DSP's reply to the port the request came from. The reply carries the
@@ -201,6 +201,5 @@ over the battery CAN bus. The battery stacks themselves have no RS-485 port.
 ## Not yet known
 
 - The upper bound of the DSP-forward hold; only the 1.5 s lower bound is fixed.
-- What, if anything, the DSP serves in 36702–38999, and what the registers in the other two
-  forward windows mean.
+- The meaning of some of the production-test values in 29500–29899.
 - Which device sends the requester side of the 29500–29503 link.

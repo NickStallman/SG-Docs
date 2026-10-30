@@ -38,7 +38,7 @@ at 2578 and holding register 30644. The model string plays no part.
 
 | Page | Contents |
 |---|---|
-| [architecture.md](architecture.md) | Ports, register windows, the slave-address gate and relay setting, the encrypted Bluetooth link, the optimizer (MLPE) link, DRM handling, firmware images |
+| [architecture.md](architecture.md) | Ports, register windows, the slave-address gate and relay setting, DSP forwarding and the power stage, the encrypted Bluetooth link, the optimizer (MLPE) link, DRM handling, firmware images |
 | [registers.md](registers.md) | Registers that differ from the SH10RS: yields and operating time, reactive-power mode, power-limit setpoint, start/stop, the PV grid-profile variant |
 
 Everything not listed on these two pages behaves as described for the SH10RS:
